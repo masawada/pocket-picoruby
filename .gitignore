@@ -1,0 +1,7 @@
+# Local toolchain and downloaded artifacts (see scripts/)
+/.toolchain/
+/.cache/
+
+# Build outputs
+/dist/
+/firmware/build/

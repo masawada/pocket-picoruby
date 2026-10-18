@@ -1,0 +1,3 @@
+PicoRuby on Analogue Pocket
+
+Runs on the openfpga-litex RISC-V SoC by agg23.
