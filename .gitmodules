@@ -1,0 +1,6 @@
+[submodule "vendor/openfpga-litex"]
+	path = vendor/openfpga-litex
+	url = https://github.com/agg23/openfpga-litex.git
+[submodule "vendor/picoruby"]
+	path = vendor/picoruby
+	url = https://github.com/picoruby/picoruby.git
