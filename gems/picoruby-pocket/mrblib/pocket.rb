@@ -13,6 +13,20 @@ module Pocket
     sleep_ms 1 until _vblank?
   end
 
+  # Four PSG-style voices mixed in C and streamed at 48 kHz. Ruby only says
+  # what to play; nothing per-sample happens in Ruby.
+  module Audio
+    WAVES = { square: 0, triangle: 1, saw: 2, noise: 3 }
+
+    # Audio.play(0, 440, 100)                        # 100 ms square wave
+    # Audio.play(1, 200, 300, volume: 200, wave: :triangle, slide_to: 50, decay: true)
+    def self.play(voice, freq, ms, volume: 128, wave: :square, slide_to: nil, decay: false)
+      wave_id = WAVES[wave]
+      raise ArgumentError, "unknown wave #{wave.inspect}" unless wave_id
+      _play(voice, freq, slide_to || 0, ms, volume, wave_id, decay)
+    end
+  end
+
   module Input
     UP     = 1 << 0
     DOWN   = 1 << 1

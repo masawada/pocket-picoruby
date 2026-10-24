@@ -60,6 +60,30 @@ loop do
 end
 ```
 
+## Sound: `Pocket::Audio`
+
+Four PSG-style voices, mixed in C and streamed to the Pocket's 48 kHz stereo
+FIFO (mono, both channels). Ruby only starts and stops notes; no per-sample
+work happens in Ruby.
+
+| Method | Description |
+| --- | --- |
+| `Audio.play(voice, freq, ms, volume: 128, wave: :square, slide_to: nil, decay: false)` | Play a note on voice 0..3: frequency in Hz, length in ms, volume 0..255. `wave` is `:square`, `:triangle`, `:saw` or `:noise`. `slide_to` glides the pitch to that frequency over the note; `decay: true` fades the volume to zero over the note |
+| `Audio.stop(voice = nil)` | Stop one voice, or all |
+| `Audio.active?(voice)` | Whether the voice is still sounding |
+| `Audio::VOICES` | 4 |
+
+```ruby
+Pocket::Audio.play(0, 880, 60)                                   # blip
+Pocket::Audio.play(1, 400, 140, slide_to: 1400, decay: true)      # rising sweep
+Pocket::Audio.play(3, 4000, 150, wave: :noise, decay: true)       # hit
+```
+
+Starting a note replaces whatever that voice was playing. On the device the
+FIFO is refilled from the 1 ms timer interrupt and holds two frames of audio;
+in the browser a Web Audio node pulls from the same synth once the page has
+seen a key press or click (browsers require a gesture before playing sound).
+
 ## Output
 
 `puts`, `print` and `p` write to the on-screen console (white), `$stderr`
@@ -82,10 +106,11 @@ operations each. Patterns that keep Tetris at 60 Hz:
 
 ## Porting
 
-The gem talks to the hardware through six C functions declared in
-`include/pocket.h` (`pocket_port_framebuffer`, `pocket_port_flush`,
-`pocket_port_vblank_triggered`, `pocket_port_wait_vblank`,
-`pocket_port_frame_count`, `pocket_port_keys`). `ports/pocket/` implements
-them on the LiteX SoC and is compiled by `firmware/Makefile`;
-`ports/posix/` implements them on an in-memory buffer for Emscripten and is
-compiled by the PicoRuby build.
+The gem talks to the hardware through the `pocket_port_*` functions declared
+in `include/pocket.h`: framebuffer, flush, vblank, frame count, keys, and an
+audio lock around synth state changes. The port also decides when to pull
+samples with `pocket_synth_render`. `ports/pocket/` implements them on the
+LiteX SoC and is compiled by `firmware/Makefile` (the firmware's timer tick
+calls `pocket_port_audio_pump`); `ports/posix/` implements them on in-memory
+buffers for Emscripten, is compiled by the PicoRuby build, and exports
+`pocket_host_*` entry points for the JavaScript host.

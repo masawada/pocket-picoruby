@@ -78,6 +78,37 @@ static mrb_value input_read(mrb_state *mrb, mrb_value klass)
   return mrb_int_value(mrb, (mrb_int)(pocket_port_keys() & 0xffff));
 }
 
+/* Pocket::Audio._play(voice, freq, slide_to, ms, volume, wave, decay) */
+static mrb_value audio_play(mrb_state *mrb, mrb_value klass)
+{
+  mrb_int voice, freq, slide_to, ms, volume, wave;
+  mrb_bool decay;
+  mrb_get_args(mrb, "iiiiiib", &voice, &freq, &slide_to, &ms, &volume, &wave, &decay);
+  if (voice < 0 || voice >= POCKET_SYNTH_VOICES) {
+    mrb_raisef(mrb, E_ARGUMENT_ERROR, "voice must be 0..%d", POCKET_SYNTH_VOICES - 1);
+  }
+  if (wave < POCKET_WAVE_SQUARE || wave > POCKET_WAVE_NOISE) {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "unknown wave");
+  }
+  pocket_synth_play((int)voice, (int)freq, (int)slide_to, (int)ms, (int)volume, (int)wave, decay);
+  return mrb_nil_value();
+}
+
+static mrb_value audio_stop(mrb_state *mrb, mrb_value klass)
+{
+  mrb_int voice = -1;
+  mrb_get_args(mrb, "|i", &voice);
+  pocket_synth_stop((int)voice);
+  return mrb_nil_value();
+}
+
+static mrb_value audio_active_p(mrb_state *mrb, mrb_value klass)
+{
+  mrb_int voice;
+  mrb_get_args(mrb, "i", &voice);
+  return mrb_bool_value(pocket_synth_active((int)voice));
+}
+
 void mrb_picoruby_pocket_gem_init(mrb_state *mrb)
 {
   struct RClass *pocket = mrb_define_module_id(mrb, MRB_SYM(Pocket));
@@ -97,6 +128,12 @@ void mrb_picoruby_pocket_gem_init(mrb_state *mrb)
 
   struct RClass *input = mrb_define_module_under_id(mrb, pocket, MRB_SYM(Input));
   mrb_define_class_method_id(mrb, input, MRB_SYM(read), input_read, MRB_ARGS_NONE());
+
+  struct RClass *audio = mrb_define_module_under_id(mrb, pocket, MRB_SYM(Audio));
+  mrb_define_const_id(mrb, audio, MRB_SYM(VOICES), mrb_fixnum_value(POCKET_SYNTH_VOICES));
+  mrb_define_class_method_id(mrb, audio, MRB_SYM(_play), audio_play, MRB_ARGS_REQ(7));
+  mrb_define_class_method_id(mrb, audio, MRB_SYM(stop), audio_stop, MRB_ARGS_OPT(1));
+  mrb_define_class_method_id(mrb, audio, MRB_SYM_Q(active), audio_active_p, MRB_ARGS_REQ(1));
 }
 
 void mrb_picoruby_pocket_gem_final(mrb_state *mrb)

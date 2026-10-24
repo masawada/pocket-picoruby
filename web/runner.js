@@ -40,6 +40,28 @@ const Module = await createModule({
   printErr: (t) => appendLog(t, "err"),
 });
 
+// Audio: the C synth renders 16-bit mono at 48 kHz into wasm memory and a
+// ScriptProcessorNode pulls it. Browsers only start audio after a gesture.
+let audioStarted = false;
+function startAudio() {
+  if (audioStarted) return;
+  audioStarted = true;
+  const ctx = new AudioContext({ sampleRate: 48000 });
+  const FRAMES = 1024;
+  const ptr = Module._malloc(FRAMES * 2);
+  const node = ctx.createScriptProcessor(FRAMES, 0, 1);
+  node.onaudioprocess = (e) => {
+    Module._pocket_host_render_audio(ptr, FRAMES);
+    const pcm = new Int16Array(Module.HEAPU8.buffer, ptr, FRAMES);
+    const out = e.outputBuffer.getChannelData(0);
+    for (let i = 0; i < FRAMES; i++) out[i] = pcm[i] / 32768;
+  };
+  node.connect(ctx.destination);
+  ctx.resume();
+}
+window.addEventListener("keydown", startAudio, { once: true });
+window.addEventListener("pointerdown", startAudio, { once: true });
+
 let keys = 0;
 window.addEventListener("keydown", (e) => {
   const bit = KEYMAP[e.code];

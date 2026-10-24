@@ -64,3 +64,13 @@ HOST_EXPORT uint16_t *pocket_host_framebuffer(void)
 {
   return framebuffer;
 }
+
+/* Single-threaded host: the audio callback and Ruby never overlap. */
+void pocket_port_audio_lock(void) {}
+void pocket_port_audio_unlock(void) {}
+
+/* The host's audio callback pulls 16-bit mono samples at 48 kHz. */
+HOST_EXPORT void pocket_host_render_audio(int16_t *out, int samples)
+{
+  pocket_synth_render(out, (size_t)samples);
+}

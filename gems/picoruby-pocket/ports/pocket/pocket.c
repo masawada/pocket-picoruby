@@ -14,6 +14,9 @@
 
 #include "display.h"
 #include "litex.h"
+#include "riscv.h"
+
+void pocket_port_audio_pump(void);
 
 static uint16_t shadow[POCKET_WIDTH * POCKET_HEIGHT] __attribute__((aligned(8)));
 
@@ -69,4 +72,43 @@ uint32_t pocket_port_frame_count(void)
 uint32_t pocket_port_keys(void)
 {
   return apf_input_cont1_key_read();
+}
+
+/*-------------------------------------
+ * Audio: the firmware's 1 ms tick calls pocket_port_audio_pump(), which tops
+ * the APF FIFO (4096 stereo samples) up to two frames' worth. Ruby changes
+ * the synth state from thread context, so it masks the tick meanwhile.
+ *------------------------------------*/
+
+#define AUDIO_TARGET (POCKET_SYNTH_RATE / 60 * 2)
+#define AUDIO_CHUNK 64
+
+void pocket_port_audio_lock(void)
+{
+  csr_clear(mstatus, MSTATUS_MIE);
+}
+
+void pocket_port_audio_unlock(void)
+{
+  csr_set(mstatus, MSTATUS_MIE);
+}
+
+void pocket_port_audio_pump(void)
+{
+  static bool enabled;
+  int16_t buf[AUDIO_CHUNK];
+  int needed = AUDIO_TARGET - (int)apf_audio_buffer_fill_read();
+  while (needed > 0) {
+    size_t n = needed < AUDIO_CHUNK ? (size_t)needed : AUDIO_CHUNK;
+    pocket_synth_render(buf, n);
+    for (size_t i = 0; i < n; i++) {
+      uint32_t s = (uint16_t)buf[i];
+      apf_audio_out_write(s | (s << 16));
+    }
+    needed -= (int)n;
+  }
+  if (!enabled) {
+    apf_audio_playback_en_write(1);
+    enabled = true;
+  }
 }

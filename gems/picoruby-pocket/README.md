@@ -8,6 +8,7 @@ Ruby API.
 ```
 include/pocket.h      renderer API and the port contract
 src/fb.c              rectangles, text, dirty-row tracking (platform independent)
+src/synth.c           4-voice PSG-style synth, 16-bit mono at 48 kHz (platform independent)
 src/mruby/pocket.c    Ruby bindings
 mrblib/pocket.rb      Pocket.rgb, Pocket.wait_vsync, Input constants and Input::State
 ports/pocket/         LiteX SoC: shadow framebuffer copied to the DMA window on flush

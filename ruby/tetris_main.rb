@@ -224,13 +224,65 @@ module Tetris
   end
 end
 
+module Tetris
+  # Sound effects, derived from what changed in the game since the last frame
+  # (the same version counters the renderer uses), so the rules stay silent
+  # about sound. Voice 0: moves and rotations, 1: locks and clears, 2: game over.
+  class Sfx
+    A = Pocket::Audio
+
+    def initialize(game)
+      remember(game)
+      @over = game.over?
+    end
+
+    def update(game)
+      over = game.over?
+      if over != @over
+        @over = over
+        A.play(2, 500, 700, wave: :saw, slide_to: 60, volume: 150, decay: true) if over
+        remember(game)
+        return
+      end
+      if game.board_version != @board_version
+        case game.last_cleared
+        when 0 then A.play(1, 140, 50, wave: :square, volume: 110)
+        when 4
+          A.play(1, 523, 90, wave: :triangle, volume: 160)
+          A.play(2, 784, 180, wave: :triangle, volume: 160, decay: true)
+        else A.play(1, 400, 140, wave: :square, slide_to: 1400, volume: 120, decay: true)
+        end
+      elsif game.version != @version
+        piece = game.current
+        if piece.rotation != @rotation
+          A.play(0, 1300, 35, wave: :triangle, volume: 90)
+        elsif piece.x != @x
+          A.play(0, 900, 18, wave: :square, volume: 60)
+        end
+      end
+      remember(game)
+    end
+
+    private
+
+    def remember(game)
+      @version = game.version
+      @board_version = game.board_version
+      @x = game.current.x
+      @rotation = game.current.rotation
+    end
+  end
+end
+
 game = Tetris::Game.new
 renderer = Tetris::Renderer.new
+sfx = Tetris::Sfx.new(game)
 input = Pocket::Input::State.new
 
 loop do
   input.update
   game.update(input)
+  sfx.update(game)
   renderer.draw(game)
   Pocket.wait_vsync
   Pocket::Display.flush

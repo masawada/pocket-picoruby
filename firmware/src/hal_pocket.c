@@ -19,6 +19,9 @@
 #include "riscv.h"
 #include "timer.h"
 
+/* gems/picoruby-pocket/ports/pocket/pocket.c: refills the audio FIFO. */
+void pocket_port_audio_pump(void);
+
 volatile int sigint_status = 0; /* MACHINE_SIG_NONE */
 
 static mrb_state *mrb_;
@@ -29,6 +32,7 @@ static mrb_state *mrb_;
 
 static void tick(void)
 {
+  pocket_port_audio_pump();
   if (mrb_) {
     picorb_tick(mrb_);
   }

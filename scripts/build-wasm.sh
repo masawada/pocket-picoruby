@@ -40,7 +40,7 @@ link() {
     -s WASM=1 -s EXPORT_ES6=1 -s MODULARIZE=1 -s ENVIRONMENT="$1" \
     -s INITIAL_MEMORY=64MB -s ALLOW_MEMORY_GROWTH=1 -s STACK_SIZE=2MB \
     -s EXPORTED_RUNTIME_METHODS='["ccall","HEAPU8"]' \
-    -s EXPORTED_FUNCTIONS='["_pocket_wasm_init","_pocket_wasm_load","_pocket_wasm_tick","_pocket_wasm_step","_pocket_wasm_alive","_pocket_host_vblank","_pocket_host_set_keys","_pocket_host_framebuffer","_malloc","_free"]' \
+    -s EXPORTED_FUNCTIONS='["_pocket_wasm_init","_pocket_wasm_load","_pocket_wasm_tick","_pocket_wasm_step","_pocket_wasm_alive","_pocket_host_vblank","_pocket_host_set_keys","_pocket_host_framebuffer","_pocket_host_render_audio","_malloc","_free"]' \
     --no-entry \
     "${ROOT}/web/runner.c" "${BUILD}/lib/libmruby.a" \
     -o "${OUT}/$2"

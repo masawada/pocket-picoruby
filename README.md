@@ -24,7 +24,7 @@ tests run on that build under Node.
 | Path | Role |
 | --- | --- |
 | `firmware/` | C firmware for the SoC: boot, on-screen console, 1 ms timer tick, PicoRuby HAL, reading the script from the data slot |
-| `gems/picoruby-pocket/` | The `Pocket` module for Ruby: screen (RGB565 framebuffer, 8x16 font), vsync, gamepad. See [docs/pocket-api.md](docs/pocket-api.md) |
+| `gems/picoruby-pocket/` | The `Pocket` module for Ruby: screen (RGB565 framebuffer, 8x16 font), vsync, gamepad, a 4-voice synth. See [docs/pocket-api.md](docs/pocket-api.md) |
 | `build_config/` | PicoRuby build configurations for the device (`pocket-picoruby.rb`) and the browser (`pocket-wasm.rb`) |
 | `core/` | Analogue core JSON (`core.json`, `data.json`, ...) for the `masawada.PicoRuby` core on platform `picoruby` |
 | `ruby/` | Ruby scripts: `main.rb`, `examples/`, Tetris in `lib/tetris/` + `tetris_main.rb` |
@@ -93,7 +93,8 @@ card root (merge with what is there). The core appears under the
 ### Tetris
 
 Load `tetris.rb`. D-pad moves, down soft-drops, up hard-drops, A/B rotate,
-Start restarts after game over. Scoring follows the usual guideline
+Start restarts after game over. Moves, locks, line clears and game over have
+sound effects. Scoring follows the usual guideline
 (100/300/500/800 x level, plus drop bonuses); the level rises every 10 lines
 and speeds up gravity; a 30-frame lock delay allows last-moment moves.
 
