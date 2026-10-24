@@ -225,9 +225,69 @@ module Tetris
 end
 
 module Tetris
+  # Background music: Korobeiniki (traditional) on two voices, one frame at a
+  # time through Sequencer. Units are sixteenth notes; 4 frames each is about
+  # 112 bpm. Stops on game over, restarts with the game.
+  class Music
+    A = Pocket::Audio
+    UNIT_FRAMES = 4
+    MELODY_VOICE = 2
+    BASS_VOICE = 3
+
+    MELODY = Sequencer.parse(<<~SCORE)
+      E5:4 B4:2 C5:2 D5:4 C5:2 B4:2
+      A4:4 A4:2 C5:2 E5:4 D5:2 C5:2
+      B4:6 C5:2 D5:4 E5:4
+      C5:4 A4:4 A4:4 -:4
+      -:2 D5:4 F5:2 A5:4 G5:2 F5:2
+      E5:6 C5:2 E5:4 D5:2 C5:2
+      B4:4 B4:2 C5:2 D5:4 E5:4
+      C5:4 A4:4 A4:4 -:4
+    SCORE
+
+    BASS = Sequencer.parse(<<~SCORE)
+      E2:2 E3:2 E2:2 E3:2 E2:2 E3:2 E2:2 E3:2
+      A2:2 A3:2 A2:2 A3:2 A2:2 A3:2 A2:2 A3:2
+      G#2:2 G#3:2 G#2:2 G#3:2 E2:2 E3:2 E2:2 E3:2
+      A2:2 A3:2 A2:2 A3:2 A2:2 A3:2 B2:2 C3:2
+      D2:2 D3:2 D2:2 D3:2 D2:2 D3:2 D2:2 D3:2
+      C2:2 C3:2 C2:2 C3:2 C2:2 C3:2 C2:2 C3:2
+      G#2:2 G#3:2 G#2:2 G#3:2 E2:2 E3:2 E2:2 E3:2
+      A2:2 A3:2 A2:2 A3:2 A2:2 A3:2 A2:2 A3:2
+    SCORE
+
+    def initialize
+      @melody = Sequencer.new(MELODY, UNIT_FRAMES) do |hz, frames|
+        A.play(MELODY_VOICE, hz, frames * 1000 / 60 - 25, wave: :square, volume: 55)
+      end
+      @bass = Sequencer.new(BASS, UNIT_FRAMES) do |hz, frames|
+        A.play(BASS_VOICE, hz, frames * 1000 / 60 - 15, wave: :triangle, volume: 90)
+      end
+      @playing = true
+    end
+
+    def update(game)
+      if game.over?
+        return unless @playing
+        @playing = false
+        A.stop(MELODY_VOICE)
+        A.stop(BASS_VOICE)
+        return
+      end
+      unless @playing
+        @playing = true
+        @melody.reset
+        @bass.reset
+      end
+      @melody.update
+      @bass.update
+    end
+  end
+
   # Sound effects, derived from what changed in the game since the last frame
   # (the same version counters the renderer uses), so the rules stay silent
-  # about sound. Voice 0: moves and rotations, 1: locks and clears, 2: game over.
+  # about sound. Voice 0: moves and rotations, 1: locks, clears and game over;
+  # voices 2 and 3 belong to Music.
   class Sfx
     A = Pocket::Audio
 
@@ -240,7 +300,7 @@ module Tetris
       over = game.over?
       if over != @over
         @over = over
-        A.play(2, 500, 700, wave: :saw, slide_to: 60, volume: 150, decay: true) if over
+        A.play(1, 500, 700, wave: :saw, slide_to: 60, volume: 150, decay: true) if over
         remember(game)
         return
       end
@@ -248,8 +308,8 @@ module Tetris
         case game.last_cleared
         when 0 then A.play(1, 140, 50, wave: :square, volume: 110)
         when 4
-          A.play(1, 523, 90, wave: :triangle, volume: 160)
-          A.play(2, 784, 180, wave: :triangle, volume: 160, decay: true)
+          A.play(0, 523, 90, wave: :triangle, volume: 160)
+          A.play(1, 784, 180, wave: :triangle, volume: 160, decay: true)
         else A.play(1, 400, 140, wave: :square, slide_to: 1400, volume: 120, decay: true)
         end
       elsif game.version != @version
@@ -277,12 +337,14 @@ end
 game = Tetris::Game.new
 renderer = Tetris::Renderer.new
 sfx = Tetris::Sfx.new(game)
+music = Tetris::Music.new
 input = Pocket::Input::State.new
 
 loop do
   input.update
   game.update(input)
   sfx.update(game)
+  music.update(game)
   renderer.draw(game)
   Pocket.wait_vsync
   Pocket::Display.flush
