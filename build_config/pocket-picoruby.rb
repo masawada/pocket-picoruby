@@ -9,8 +9,10 @@
 # in firmware/Makefile; the two must stay in sync or the firmware crashes in
 # the first mrb_* call.
 
+require_relative "pocket_gems"
+
 TOOLCHAIN_BIN = ENV['POCKET_TOOLCHAIN_BIN'] ||
-  File.expand_path("../../.toolchain/xpack-riscv-none-elf-gcc-15.2.0-1/bin", __dir__)
+  File.expand_path("../.toolchain/xpack-riscv-none-elf-gcc-15.2.0-1/bin", __dir__)
 
 MRuby::CrossBuild.new("pocket-picoruby#{ENV['PICORB_DEBUG'] ? '-debug' : ''}") do |conf|
   conf.toolchain :gcc
@@ -29,6 +31,9 @@ MRuby::CrossBuild.new("pocket-picoruby#{ENV['PICORB_DEBUG'] ? '-debug' : ''}") d
   conf.cc.defines << "MRB_INT32"
   conf.cc.defines << "MRB_WORD_BOXING"
   conf.cc.defines << "MRB_32BIT"
+  # picoruby-mruby adds this too, but too late for the mruby core sources;
+  # without it here string.c lacks the UTF-8 helpers the ext gems reference.
+  conf.cc.defines << "MRB_UTF8_STRING"
   conf.cc.defines << "NO_CLOCK_GETTIME=1"
 
   conf.cc.flags.flatten!
@@ -45,6 +50,5 @@ MRuby::CrossBuild.new("pocket-picoruby#{ENV['PICORB_DEBUG'] ? '-debug' : ''}") d
 
   conf.picoruby
 
-  conf.gembox "minimum"
-  conf.gem core: "picoruby-machine"
+  pocket_common_gems(conf)
 end

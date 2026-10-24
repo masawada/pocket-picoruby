@@ -6,7 +6,7 @@
 set -eu
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CONFIG="${ROOT}/firmware/build_config/pocket-picoruby.rb"
+CONFIG="${ROOT}/build_config/pocket-picoruby.rb"
 
 cd "${ROOT}/vendor/picoruby"
 MRUBY_CONFIG="${CONFIG}" exec rake "$@"

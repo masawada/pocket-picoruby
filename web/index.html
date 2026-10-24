@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>pocket-picoruby runner</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #202020; color: #ddd; margin: 1rem; }
+    #screen { width: 798px; height: 720px; image-rendering: pixelated; background: #000; display: block; }
+    #log { font-family: ui-monospace, monospace; font-size: 13px; white-space: pre-wrap;
+           background: #000; color: #eee; height: 12rem; overflow-y: auto; padding: .5rem; margin-top: .5rem; }
+    #log .err { color: #f66; }
+    #status { margin: .5rem 0; color: #9c9; }
+    kbd { background: #444; padding: 0 .3em; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <canvas id="screen" width="266" height="240"></canvas>
+  <div id="status"></div>
+  <input id="file" type="file" accept=".rb">
+  <p>
+    <kbd>arrows</kbd> d-pad, <kbd>Z</kbd> A, <kbd>X</kbd> B, <kbd>A</kbd> X, <kbd>S</kbd> Y,
+    <kbd>Q</kbd>/<kbd>W</kbd> L/R, <kbd>Shift</kbd> select, <kbd>Enter</kbd> start
+  </p>
+  <div id="log"></div>
+  <script type="module" src="./runner.js"></script>
+</body>
+</html>

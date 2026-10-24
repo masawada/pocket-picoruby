@@ -8,6 +8,7 @@
 ROOT      := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 LITEX_DIR ?= $(ROOT)/vendor/openfpga-litex
 PICORUBY_DIR ?= $(ROOT)/vendor/picoruby
+POCKET_GEM_DIR := $(ROOT)/gems/picoruby-pocket
 TOOLCHAIN_DIR ?= $(ROOT)/.toolchain/xpack-riscv-none-elf-gcc-15.2.0-1
 CROSS     ?= $(TOOLCHAIN_DIR)/bin/riscv-none-elf-
 
@@ -21,7 +22,7 @@ TARGET  := $(BUILD)/boot
 ARCH_FLAGS := -march=rv32imafdc_zicsr -mabi=ilp32d
 
 # --- PicoRuby -----------------------------------------------------------------
-# Must match firmware/build_config/pocket-picoruby.rb (and what conf.picoruby /
+# Must match build_config/pocket-picoruby.rb (and what conf.picoruby /
 # picoruby-mruby add on top of it): these fix sizeof(mrb_value) and the
 # mrb_state layout shared with libmruby.a.
 PICORUBY_BUILD := $(PICORUBY_DIR)/build/pocket-picoruby
@@ -45,14 +46,15 @@ PICORUBY_INCLUDES := \
 	-I$(PICORUBY_DIR)/mrbgems/picoruby-mruby/lib/mruby/mrbgems/mruby-task/include \
 	-I$(PICORUBY_DIR)/mrbgems/picoruby-require/include \
 	-I$(PICORUBY_DIR)/mrbgems/picoruby-io-console/include \
-	-I$(PICORUBY_BUILD)/include
+	-I$(PICORUBY_BUILD)/include \
+	-I$(POCKET_GEM_DIR)/include
 
 # Gem port sources that the firmware compiles itself (a cross build adds none).
-PORT_SRCS := $(PICORUBY_DIR)/mrbgems/picoruby-machine/ports/common/machine.c
-PORT_OBJS := $(BUILD)/port_machine_common.o
+PORT_OBJS := $(BUILD)/port_machine_common.o $(BUILD)/port_pocket.o
 
-FONT_BDF := $(PICORUBY_DIR)/mrbgems/picoruby-shinonome/lib/shinonome-0.9.11/bdf/shnm8x16a.bdf
-FONT_H   := $(BUILD)/font_8x16.h
+FONT_BDF  := $(PICORUBY_DIR)/mrbgems/picoruby-shinonome/lib/shinonome-0.9.11/bdf/shnm8x16a.bdf
+FONT_TOOL := $(POCKET_GEM_DIR)/tools/bdf2c.rb
+FONT_H    := $(BUILD)/font_8x16.h
 
 INCLUDES := \
 	-I$(LITEX_DIR)/litex/build/litex/software/include \
@@ -83,8 +85,8 @@ all: $(TARGET).bin size
 $(BUILD):
 	mkdir -p $(BUILD)
 
-$(FONT_H): $(FONT_BDF) tools/bdf2c.rb | $(BUILD)
-	ruby tools/bdf2c.rb $< $@
+$(FONT_H): $(FONT_BDF) $(FONT_TOOL) | $(BUILD)
+	ruby $(FONT_TOOL) $< $@
 
 $(BUILD)/console.o: $(FONT_H)
 
@@ -94,7 +96,10 @@ $(BUILD)/init_asm.o: $(LINKER_DIR)/init_asm.S | $(BUILD)
 $(BUILD)/%.o: src/%.c | $(BUILD)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
-$(BUILD)/port_machine_common.o: $(PORT_SRCS) | $(BUILD)
+$(BUILD)/port_machine_common.o: $(PICORUBY_DIR)/mrbgems/picoruby-machine/ports/common/machine.c | $(BUILD)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD)/port_pocket.o: $(POCKET_GEM_DIR)/ports/pocket/pocket.c | $(BUILD)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(LIBMRUBY):
