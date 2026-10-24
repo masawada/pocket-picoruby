@@ -24,7 +24,7 @@ tests run on that build under Node.
 | Path | Role |
 | --- | --- |
 | `firmware/` | C firmware for the SoC: boot, on-screen console, 1 ms timer tick, PicoRuby HAL, reading the script from the data slot |
-| `gems/picoruby-pocket/` | The `Pocket` module for Ruby: screen (RGB565 framebuffer, 8x16 font), vsync, gamepad, a 4-voice synth. See [docs/pocket-api.md](docs/pocket-api.md) |
+| `gems/picoruby-pocket/` | The `Pocket` module for Ruby: screen (RGB565 framebuffer, 8x16 ASCII and 16x16 Japanese fonts), vsync, gamepad, a 4-voice synth. See [docs/pocket-api.md](docs/pocket-api.md) |
 | `build_config/` | PicoRuby build configurations for the device (`pocket-picoruby.rb`) and the browser (`pocket-wasm.rb`) |
 | `core/` | Analogue core JSON (`core.json`, `data.json`, ...) for the `masawada.PicoRuby` core on platform `picoruby` |
 | `ruby/` | Ruby scripts: `main.rb`, `examples/`, Tetris in `lib/tetris/` + `tetris_main.rb` |
@@ -70,6 +70,7 @@ scripts/package.sh              # dist/pocket/ and dist/masawada.PicoRuby.zip
 scripts/build-wasm.sh           # web/dist/pocket.js (browser) and pocket-node.js (Node)
 scripts/serve-web.sh            # then open http://localhost:8000/web/?script=../build/tetris.rb
 node scripts/run-rb.mjs ruby/examples/hello.rb   # run a script headlessly
+node scripts/run-rb.mjs ruby/examples/nihongo.rb --frames 5 --screenshot shot.png  # and grab the screen
 ruby scripts/test.rb            # picotest suites in test/
 ```
 
@@ -137,7 +138,7 @@ The full API is in [docs/pocket-api.md](docs/pocket-api.md).
   SoC, bitstream and generated headers
 - [picoruby/picoruby](https://github.com/picoruby/picoruby) for the VM,
   compiler and build system
-- The Shinonome font (public domain) for the 8x16 glyphs
+- The Shinonome fonts (public domain) for the 8x16 ASCII and 16x16 JIS X 0208 glyphs
 
 ## License
 

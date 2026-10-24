@@ -1,6 +1,7 @@
 #include "../include/pocket.h"
 
 #include "font_8x16.h"
+#include "font_jis16.h"
 
 static int dirty_y0 = POCKET_HEIGHT;
 static int dirty_y1 = -1;
@@ -66,13 +67,85 @@ static void draw_glyph(uint16_t *fb, int x, int y, unsigned char c, uint16_t fg,
   }
 }
 
+/* 16x16 glyph, two bytes per row. */
+static void draw_wide_glyph(uint16_t *fb, int x, int y, const uint8_t *glyph, uint16_t fg, int bg)
+{
+  for (int gy = 0; gy < 16; gy++) {
+    int py = y + gy;
+    if (py < 0 || py >= POCKET_HEIGHT) continue;
+    uint16_t *row = fb + py * POCKET_WIDTH;
+    uint16_t bits = (uint16_t)((glyph[gy * 2] << 8) | glyph[gy * 2 + 1]);
+    for (int gx = 0; gx < 16; gx++) {
+      int px = x + gx;
+      if (px < 0 || px >= POCKET_WIDTH) continue;
+      if (bits & (0x8000 >> gx)) {
+        row[px] = fg;
+      }
+      else if (bg >= 0) {
+        row[px] = (uint16_t)bg;
+      }
+    }
+  }
+}
+
+/* Index into the JIS X 0208 font for a code point, or -1. */
+static int jis16_lookup(uint32_t cp)
+{
+  if (cp > 0xffff) return -1;
+  int lo = 0, hi = FONT_JIS16_COUNT - 1;
+  while (lo <= hi) {
+    int mid = (lo + hi) / 2;
+    uint16_t v = font_jis16_codes[mid];
+    if (v == cp) return mid;
+    if (v < cp) lo = mid + 1; else hi = mid - 1;
+  }
+  return -1;
+}
+
+/* Decode one UTF-8 sequence; malformed input yields U+FFFD and one byte. */
+static uint32_t utf8_decode(const unsigned char *s, size_t len, size_t *used)
+{
+  unsigned char c = s[0];
+  size_t need;
+  uint32_t cp;
+  if (c < 0x80) { *used = 1; return c; }
+  else if ((c & 0xe0) == 0xc0) { need = 1; cp = c & 0x1f; }
+  else if ((c & 0xf0) == 0xe0) { need = 2; cp = c & 0x0f; }
+  else if ((c & 0xf8) == 0xf0) { need = 3; cp = c & 0x07; }
+  else { *used = 1; return 0xfffd; }
+  if (len < need + 1) { *used = 1; return 0xfffd; }
+  for (size_t i = 1; i <= need; i++) {
+    if ((s[i] & 0xc0) != 0x80) { *used = 1; return 0xfffd; }
+    cp = (cp << 6) | (s[i] & 0x3f);
+  }
+  *used = need + 1;
+  return cp;
+}
+
+/* ASCII is drawn 8 px wide from the 8x16 font, JIS X 0208 characters 16 px
+ * wide from the 16x16 font; anything else draws '?'. */
 void pocket_fb_draw_text(uint16_t *fb, int x, int y, const char *s, size_t len, uint16_t fg, int bg)
 {
   if (len > 0) mark_dirty(y, y + FONT_HEIGHT - 1);
-  for (size_t i = 0; i < len; i++) {
-    unsigned char c = (unsigned char)s[i];
-    if (c >= 0x80 && c < 0xc0) continue; /* UTF-8 continuation: the lead byte drew '?' */
-    draw_glyph(fb, x, y, c, fg, bg);
-    x += FONT_WIDTH;
+  const unsigned char *p = (const unsigned char *)s;
+  size_t i = 0;
+  while (i < len) {
+    size_t used;
+    uint32_t cp = utf8_decode(p + i, len - i, &used);
+    i += used;
+    if (cp < 0x80) {
+      draw_glyph(fb, x, y, (unsigned char)cp, fg, bg);
+      x += FONT_WIDTH;
+      continue;
+    }
+    int idx = jis16_lookup(cp);
+    if (idx < 0) {
+      draw_glyph(fb, x, y, '?', fg, bg);
+      x += FONT_WIDTH;
+    }
+    else {
+      draw_wide_glyph(fb, x, y, font_jis16_glyphs[idx], fg, bg);
+      x += 16;
+    }
   }
 }

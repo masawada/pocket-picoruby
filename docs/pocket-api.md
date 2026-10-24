@@ -12,7 +12,7 @@ shown after `flush`; nothing appears until then.
 | --- | --- |
 | `Display.clear(colour = 0)` | Fill the whole screen |
 | `Display.fill_rect(x, y, w, h, colour)` | Filled rectangle, clipped to the screen |
-| `Display.draw_text(x, y, str, colour, bg = nil)` | Text in the 8x16 font (ASCII; other bytes draw `?`). With `bg` the glyph background is filled, without it only the glyph pixels are drawn |
+| `Display.draw_text(x, y, str, colour, bg = nil)` | UTF-8 text: ASCII in the 8x16 font, JIS X 0208 characters (kana, kanji, full-width symbols) in the 16x16 Shinonome Gothic font, 16 px wide; anything else draws `?`. With `bg` the glyph background is filled, without it only the glyph pixels are drawn |
 | `Display.flush` | Make what was drawn visible (copies the changed rows to the display) |
 | `Display::WIDTH`, `Display::HEIGHT` | 266, 240 |
 | `Display::FONT_WIDTH`, `Display::FONT_HEIGHT` | 8, 16 |

@@ -14,7 +14,8 @@ mrblib/pocket.rb      Pocket.rgb, Pocket.wait_vsync, Input constants and Input::
 ports/pocket/         LiteX SoC: shadow framebuffer copied to the DMA window on flush
 ports/posix/          in-memory framebuffer for the browser (Emscripten); the host
                       calls pocket_host_vblank / pocket_host_set_keys
-tools/bdf2c.rb        converts the Shinonome 8x16 BDF into font_8x16.h at build time
+tools/bdf2c.rb        converts the Shinonome 8x16 ASCII BDF into font_8x16.h at build time
+tools/jisfont2c.rb    converts the Shinonome 16x16 JIS X 0208 BDF (+ JIS0208.TXT) into font_jis16.h
 ```
 
 Add it to a PicoRuby build with `conf.gem gemdir: "path/to/picoruby-pocket"`

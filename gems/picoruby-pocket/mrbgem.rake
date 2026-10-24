@@ -5,15 +5,21 @@ MRuby::Gem::Specification.new('picoruby-pocket') do |spec|
 
   spec.add_dependency 'picoruby-machine'
 
-  # The 8x16 ASCII font (Shinonome, public domain) is converted into a C header
-  # at build time; src/fb.c draws text with it.
+  # The Shinonome fonts (public domain) are converted into C headers at build
+  # time; src/fb.c draws text with them: 8x16 for ASCII, 16x16 for JIS X 0208.
   include_dir = "#{build_dir}/include"
   spec.cc.include_paths << include_dir
-  font_bdf = "#{MRUBY_ROOT}/mrbgems/picoruby-shinonome/lib/shinonome-0.9.11/bdf/shnm8x16a.bdf"
-  font_tool = "#{dir}/tools/bdf2c.rb"
-  font_h = "#{include_dir}/font_8x16.h"
-  if !File.exist?(font_h) || File.mtime(font_h) < [File.mtime(font_bdf), File.mtime(font_tool)].max
+  shinonome = "#{MRUBY_ROOT}/mrbgems/picoruby-shinonome/lib"
+  fonts = [
+    { tool: "#{dir}/tools/bdf2c.rb", out: "#{include_dir}/font_8x16.h",
+      inputs: ["#{shinonome}/shinonome-0.9.11/bdf/shnm8x16a.bdf"] },
+    { tool: "#{dir}/tools/jisfont2c.rb", out: "#{include_dir}/font_jis16.h",
+      inputs: ["#{shinonome}/shinonome-0.9.11/bdf/shnmk16.bdf", "#{shinonome}/JIS0208.TXT"] },
+  ]
+  fonts.each do |font|
+    sources = font[:inputs] + [font[:tool]]
+    next if File.exist?(font[:out]) && File.mtime(font[:out]) >= sources.map { |s| File.mtime(s) }.max
     FileUtils.mkdir_p(include_dir)
-    sh "ruby #{font_tool} #{font_bdf} #{font_h}"
+    sh "ruby #{font[:tool]} #{font[:inputs].join(' ')} #{font[:out]}"
   end
 end
