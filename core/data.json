@@ -11,6 +11,16 @@
         "deferload": true,
         "extensions": ["bin"],
         "address": "0x00000000"
+      },
+      {
+        "name": "Script",
+        "id": 1,
+        "required": false,
+        "filename": "main.rb",
+        "parameters": "0x249",
+        "deferload": true,
+        "extensions": ["rb"],
+        "address": "0x00000000"
       }
     ]
   }

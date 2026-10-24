@@ -73,7 +73,7 @@ LDLIBS := -L$(PICORUBY_BUILD)/lib -lmruby -lm
 
 # init_asm.o must keep this name: c-linker.ld places *init_asm* first in .text.
 OBJS := $(BUILD)/init_asm.o \
-	$(BUILD)/main.o $(BUILD)/display.o $(BUILD)/console.o $(BUILD)/timer.o \
+	$(BUILD)/main.o $(BUILD)/display.o $(BUILD)/console.o $(BUILD)/timer.o $(BUILD)/bridge.o \
 	$(BUILD)/hal_pocket.o $(BUILD)/newlib_stubs.o \
 	$(PORT_OBJS)
 

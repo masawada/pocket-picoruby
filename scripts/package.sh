@@ -3,7 +3,7 @@
 #
 #   Cores/masawada.PicoRuby/   core definition JSON + bitstream (from openfpga-litex release)
 #   Platforms/picoruby.json    platform definition
-#   Assets/picoruby/common/    boot.bin (firmware) and, later, Ruby scripts
+#   Assets/picoruby/common/    boot.bin (firmware), main.rb (default script), examples/
 set -eu
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -27,6 +27,9 @@ cp "${ROOT}"/core/core.json "${ROOT}"/core/data.json "${ROOT}"/core/video.json \
 cp "${BITSTREAM}" "${OUT}/Cores/${CORE_NAME}/riscv.rev"
 cp "${ROOT}/core/platform.json" "${OUT}/Platforms/${PLATFORM}.json"
 cp "${BOOT_BIN}" "${OUT}/Assets/${PLATFORM}/common/boot.bin"
+cp "${ROOT}/ruby/main.rb" "${OUT}/Assets/${PLATFORM}/common/main.rb"
+mkdir -p "${OUT}/Assets/${PLATFORM}/common/examples"
+cp "${ROOT}"/ruby/examples/*.rb "${OUT}/Assets/${PLATFORM}/common/examples/"
 
 ZIP="${ROOT}/dist/${CORE_NAME}.zip"
 rm -f "${ZIP}"

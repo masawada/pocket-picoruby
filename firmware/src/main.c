@@ -1,6 +1,8 @@
 /*
- * M2: boot PicoRuby, compile an embedded script on the device and run it.
- * Output and exceptions appear on the on-screen console.
+ * Boot PicoRuby, read the Ruby script from the "Script" data slot, compile it
+ * on the device and run it. Output and exceptions appear on the on-screen
+ * console. Picking another .rb from the Pocket menu resets the core, so this
+ * runs again from the top.
  */
 #include <stdint.h>
 #include <string.h>
@@ -11,6 +13,7 @@
 #include <mruby/string.h>
 #include "hal.h"
 
+#include "bridge.h"
 #include "console.h"
 #include "display.h"
 #include "litex.h"
@@ -34,21 +37,12 @@
 #define RUBY_HEAP_END ((uintptr_t)MAIN_RAM_BASE + MAIN_RAM_SIZE - STACK_RESERVE)
 #define RUBY_HEAP_SIZE (RUBY_HEAP_END - RUBY_HEAP_BASE)
 
-extern mrb_state *global_mrb; /* defined in mruby-compiler (ccontext.c) */
+/* data.json slot holding the user's .rb (see core/data.json). */
+#define SCRIPT_SLOT 1
+#define SCRIPT_MAX_SIZE (256 * 1024)
+static uint8_t script_buf[SCRIPT_MAX_SIZE] __attribute__((aligned(4)));
 
-static const char main_script[] =
-  "puts 'Hello from PicoRuby on the Pocket!'\n"
-  "puts \"RUBY_ENGINE=#{RUBY_ENGINE} #{RUBY_VERSION}\"\n"
-  "puts \"platform: #{Machine.respond_to?(:uptime_us) ? 'Machine ok' : 'Machine?'}\"\n"
-  "5.times do |i|\n"
-  "  puts \"tick #{i} at #{Machine.uptime_us / 1000} ms\"\n"
-  "  sleep 0.5\n"
-  "end\n"
-  "def boom(n)\n"
-  "  raise ArgumentError, 'boom' if n == 0\n"
-  "  boom(n - 1)\n"
-  "end\n"
-  "boom(3)\n";
+extern mrb_state *global_mrb; /* defined in mruby-compiler (ccontext.c) */
 
 static void halt(void)
 {
@@ -84,10 +78,39 @@ static void print_diagnostics(mrc_ccontext *cc)
   console_set_colour(CONSOLE_RED, CONSOLE_BLACK);
   for (mrc_diagnostic_list *d = cc->diagnostic_list; d; d = d->next) {
     if (d->code == MRC_PARSER_ERROR || d->code == MRC_GENERATOR_ERROR) {
-      console_printf("main.rb:%d:%d: %s\n", (int)d->line, (int)d->column, d->message);
+      console_printf("script:%d:%d: %s\n", (int)d->line, (int)d->column, d->message);
     }
   }
   console_set_colour(CONSOLE_WHITE, CONSOLE_BLACK);
+}
+
+/* Fetch the script from the data slot; halts with a message when there is none. */
+static size_t load_script(void)
+{
+  size_t len = 0;
+  uint32_t code = 0;
+  bridge_result_t r = bridge_read_file(SCRIPT_SLOT, script_buf, SCRIPT_MAX_SIZE, &len, &code);
+  switch (r) {
+  case BRIDGE_OK:
+    console_set_colour(CONSOLE_GREY, CONSOLE_BLACK);
+    console_printf("script: %u bytes\n", (unsigned)len);
+    console_set_colour(CONSOLE_WHITE, CONSOLE_BLACK);
+    return len;
+  case BRIDGE_NO_FILE:
+    console_puts("No script loaded.\nPick a .rb file in the Script slot\nfrom the Pocket menu.\n");
+    break;
+  case BRIDGE_TOO_LARGE:
+    console_printf("Script is larger than %u KB.\n", (unsigned)(SCRIPT_MAX_SIZE / 1024));
+    break;
+  case BRIDGE_TIMEOUT:
+    console_puts("Timed out reading the script slot.\n");
+    break;
+  case BRIDGE_ERROR:
+    console_printf("Reading the script slot failed (result code %lu).\n", (unsigned long)code);
+    break;
+  }
+  halt();
+  return 0;
 }
 
 int main(void)
@@ -102,6 +125,8 @@ int main(void)
   console_printf("heap %u KB at %08lx\n", (unsigned)(RUBY_HEAP_SIZE / 1024), (unsigned long)RUBY_HEAP_BASE);
   console_set_colour(CONSOLE_WHITE, CONSOLE_BLACK);
 
+  size_t script_len = load_script();
+
   mrb_state *mrb = mrb_open_with_custom_alloc((void *)RUBY_HEAP_BASE, RUBY_HEAP_SIZE);
   if (mrb == NULL) {
     console_puts("mrb_open_with_custom_alloc failed\n");
@@ -115,9 +140,9 @@ int main(void)
   }
 
   mrc_ccontext *cc = mrc_ccontext_new(mrb);
-  mrc_ccontext_filename(cc, "main.rb");
-  const uint8_t *source = (const uint8_t *)main_script;
-  mrc_irep *irep = mrc_load_string_cxt(cc, &source, strlen(main_script));
+  mrc_ccontext_filename(cc, "script");
+  const uint8_t *source = script_buf;
+  mrc_irep *irep = mrc_load_string_cxt(cc, &source, script_len);
   if (irep == NULL) {
     console_puts("compile error:\n");
     print_diagnostics(cc);
