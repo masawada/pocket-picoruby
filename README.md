@@ -71,6 +71,7 @@ scripts/build-wasm.sh           # web/dist/pocket.js (browser) and pocket-node.j
 scripts/serve-web.sh            # then open http://localhost:8000/web/?script=../build/tetris.rb
 node scripts/run-rb.mjs ruby/examples/hello.rb   # run a script headlessly
 node scripts/run-rb.mjs ruby/examples/nihongo.rb --frames 5 --screenshot shot.png  # and grab the screen
+node scripts/run-rb.mjs ruby/examples/draw.rb --frames 60 --press RIGHT@10 --press A@30 --screenshot shot.png  # scripted input
 ruby scripts/test.rb            # picotest suites in test/
 ```
 

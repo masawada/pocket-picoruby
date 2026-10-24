@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 // Run a Ruby script headlessly on the wasm build (web/dist/pocket-node.js).
 //
-//   node scripts/run-rb.mjs path/to/script.rb [--frames N] [--timeout MS] [--screenshot out.png]
+//   node scripts/run-rb.mjs path/to/script.rb [--frames N] [--timeout MS] [--screenshot out.png] [--press A@30 ...]
 //
 // The screen is not shown; vblank is raised every 16 ms of wall time so
 // Pocket.wait_vsync paces the script like the device. Exit status is 1 when a
 // task raised, 2 on timeout. --frames stops after N vblanks (for scripts that
 // loop forever, such as ruby/examples/draw.rb). --screenshot writes the final
-// framebuffer as a PNG.
+// framebuffer as a PNG; --press holds a button for two frames from the given
+// frame (names as in Pocket::Input), so a scripted run can navigate.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -28,6 +29,24 @@ const maxFrames = opt("--frames", Infinity);
 const timeoutMs = opt("--timeout", 60000);
 const shotIndex = args.indexOf("--screenshot");
 const screenshot = shotIndex >= 0 ? args[shotIndex + 1] : null;
+
+// --press A@30 --press RIGHT@60: hold a button for two frames from that frame.
+const BUTTONS = {
+  UP: 1 << 0, DOWN: 1 << 1, LEFT: 1 << 2, RIGHT: 1 << 3, A: 1 << 4, B: 1 << 5, X: 1 << 6, Y: 1 << 7,
+  L1: 1 << 8, R1: 1 << 9, L2: 1 << 10, R2: 1 << 11, L3: 1 << 12, R3: 1 << 13, SELECT: 1 << 14, START: 1 << 15,
+};
+const presses = [];
+args.forEach((a, i) => {
+  if (a !== "--press") return;
+  const [name, at] = args[i + 1].split("@");
+  if (!(name in BUTTONS)) { console.error(`unknown button ${name}`); process.exit(64); }
+  presses.push({ bit: BUTTONS[name], at: Number(at) });
+});
+function keysAtFrame(frame) {
+  let bits = 0;
+  for (const p of presses) if (frame >= p.at && frame < p.at + 2) bits |= p.bit;
+  return bits;
+}
 
 const WIDTH = 266;
 const HEIGHT = 240;
@@ -104,6 +123,7 @@ for (;;) {
     Module._pocket_host_vblank();
     lastVblank = now;
     if (++frames >= maxFrames) break;
+    if (presses.length) Module._pocket_host_set_keys(keysAtFrame(frames));
   }
   if (now - started > timeoutMs) {
     console.error(`run-rb: timed out after ${timeoutMs} ms`);
