@@ -28,6 +28,7 @@ cp "${BITSTREAM}" "${OUT}/Cores/${CORE_NAME}/riscv.rev"
 cp "${ROOT}/core/platform.json" "${OUT}/Platforms/${PLATFORM}.json"
 cp "${BOOT_BIN}" "${OUT}/Assets/${PLATFORM}/common/boot.bin"
 cp "${ROOT}/ruby/main.rb" "${OUT}/Assets/${PLATFORM}/common/main.rb"
+ruby "${ROOT}/scripts/bundle-rb.rb" "${OUT}/Assets/${PLATFORM}/common/tetris.rb"
 mkdir -p "${OUT}/Assets/${PLATFORM}/common/examples"
 cp "${ROOT}"/ruby/examples/*.rb "${OUT}/Assets/${PLATFORM}/common/examples/"
 
