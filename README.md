@@ -92,8 +92,9 @@ card root (merge with what is there). The core appears under the
 
 ### Tetris
 
-Load `tetris.rb`. D-pad moves, down soft-drops, up hard-drops, A/B rotate,
-Start restarts after game over. Moves, locks, line clears and game over have
+Load `tetris.rb`. D-pad moves, down soft-drops, up hard-drops, A/B rotate.
+Start pauses with a Resume/Restart menu (up/down to pick, A or Start to
+confirm) and restarts after game over. Moves, locks, line clears and game over have
 sound effects, and Korobeiniki plays on two voices from a score written in
 Ruby (`Tetris::Music` in `ruby/tetris_main.rb`). Scoring follows the usual guideline
 (100/300/500/800 x level, plus drop bonuses); the level rises every 10 lines

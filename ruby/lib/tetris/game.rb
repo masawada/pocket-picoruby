@@ -21,6 +21,8 @@ module Tetris
     # or a restart). last_cleared is the line count of the latest lock, so a
     # renderer knows whether rows shifted.
     attr_reader :version, :board_version, :last_cleared
+    # Pause menu: Start pauses, up/down pick :resume or :restart, A or Start confirms.
+    attr_reader :pause_selection
 
     # bag: callable returning the next 7 kinds (a shuffled Piece::KINDS by default).
     def initialize(bag: nil)
@@ -36,6 +38,8 @@ module Tetris
       @lines = 0
       @level = 1
       @over = false
+      @paused = false
+      @pause_selection = :resume
       @version = (@version || 0) + 1
       @board_version = (@board_version || 0) + 1
       @last_cleared = 0
@@ -46,6 +50,10 @@ module Tetris
 
     def over?
       @over
+    end
+
+    def paused?
+      @paused
     end
 
     def next_kind
@@ -74,6 +82,16 @@ module Tetris
         return
       end
 
+      if @paused
+        update_pause_menu(pressed)
+        return
+      end
+      if (pressed & Pocket::Input::START) != 0
+        @paused = true
+        @pause_selection = :resume
+        return
+      end
+
       handle_horizontal(held)
       try_rotate(1) if (pressed & Pocket::Input::A) != 0
       try_rotate(-1) if (pressed & Pocket::Input::B) != 0
@@ -87,6 +105,20 @@ module Tetris
     end
 
     private
+
+    def update_pause_menu(pressed)
+      if (pressed & (Pocket::Input::UP | Pocket::Input::DOWN)) != 0
+        @pause_selection = @pause_selection == :resume ? :restart : :resume
+      end
+      if (pressed & (Pocket::Input::A | Pocket::Input::START)) != 0
+        if @pause_selection == :restart
+          restart
+        else
+          @paused = false
+          @das_dir = 0
+        end
+      end
+    end
 
     def spawn
       refill_queue

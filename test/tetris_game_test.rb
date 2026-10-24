@@ -219,6 +219,58 @@ class TetrisGameTest < Picotest::Test
     assert_equal(frozen, @game.current.y)
   end
 
+  def test_start_pauses_and_freezes_the_game
+    assert_equal(false, @game.paused?)
+    @input.press(Pocket::Input::START)
+    step
+    assert(@game.paused?)
+    assert_equal(:resume, @game.pause_selection)
+    @input.release(Pocket::Input::START)
+    y = @game.current.y
+    step(Tetris::Game.gravity_frames(1) * 2)
+    assert_equal(y, @game.current.y)
+    @input.press(Pocket::Input::LEFT)
+    step
+    assert_equal(3, @game.current.x)
+    @input.release(Pocket::Input::LEFT)
+  end
+
+  def test_pause_menu_resume
+    @input.press(Pocket::Input::START)
+    step
+    @input.release(Pocket::Input::START)
+    @input.press(Pocket::Input::DOWN)
+    step
+    assert_equal(:restart, @game.pause_selection)
+    @input.release(Pocket::Input::DOWN)
+    @input.press(Pocket::Input::UP)
+    step
+    assert_equal(:resume, @game.pause_selection)
+    @input.release(Pocket::Input::UP)
+    @input.press(Pocket::Input::A)
+    step
+    assert_equal(false, @game.paused?)
+    assert_equal(:O, @game.current.kind)
+  end
+
+  def test_pause_menu_restart
+    @input.press(Pocket::Input::UP)
+    step
+    assert_equal(:O, @game.board[4, 21])
+    @input.release(Pocket::Input::UP)
+    @input.press(Pocket::Input::START)
+    step
+    @input.release(Pocket::Input::START)
+    @input.press(Pocket::Input::DOWN)
+    step
+    @input.release(Pocket::Input::DOWN)
+    @input.press(Pocket::Input::START)
+    step
+    assert_equal(false, @game.paused?)
+    assert_equal(nil, @game.board[4, 21])
+    assert_equal(0, @game.score)
+  end
+
   def test_restart_after_game_over
     (0...Tetris::Board::HEIGHT).each { |y| @game.board.set(4, y, :X) }
     @input.press(Pocket::Input::UP)

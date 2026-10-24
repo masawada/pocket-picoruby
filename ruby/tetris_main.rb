@@ -2,8 +2,9 @@
 # ruby/lib/tetris/; scripts/bundle-rb.rb joins them with this file into one
 # script (build/tetris.rb) because the device loads a single .rb.
 #
-# Controls: d-pad left/right move, down soft drop, up hard drop,
-#           A/B rotate, Start restarts after game over.
+# Controls: d-pad left/right move, down soft drop, up hard drop, A/B rotate,
+#           Start pauses (up/down pick Resume or Restart, A or Start confirms)
+#           and restarts after game over.
 #
 # Drawing is budgeted for the Pocket, where a Ruby op costs ~5 us: a frame
 # where nothing moved draws nothing, a move erases and draws 16 cells at most,
@@ -79,6 +80,7 @@ module Tetris
       draw_number(156, game.lines, @last_lines); @last_lines = game.lines
       draw_number(196, game.level, @last_level); @last_level = game.level
       draw_over(game.over?)
+      draw_pause(game)
     end
 
     private
@@ -207,6 +209,30 @@ module Tetris
       D.draw_text(PANEL_X, y, value.to_s.rjust(8), TEXT, BG)
     end
 
+    def draw_pause(game)
+      paused = game.paused?
+      if paused != @last_paused
+        @last_paused = paused
+        if paused
+          D.fill_rect(BOARD_X, BOARD_Y + 70, Board::WIDTH * CELL, 64, WELL)
+          D.draw_text(BOARD_X + 26, BOARD_Y + 76, "PAUSED", TEXT)
+          @last_selection = nil
+        else
+          # Repaint the well under the menu.
+          @last_cells = Array.new(@last_cells.size, nil)
+          @last_version = nil
+          @last_board_version = nil
+          return
+        end
+      end
+      return unless paused
+      selection = game.pause_selection
+      return if selection == @last_selection
+      @last_selection = selection
+      D.draw_text(BOARD_X + 10, BOARD_Y + 96, (selection == :resume ? "> " : "  ") + "RESUME", TEXT, WELL)
+      D.draw_text(BOARD_X + 10, BOARD_Y + 112, (selection == :restart ? "> " : "  ") + "RESTART", TEXT, WELL)
+    end
+
     def draw_over(over)
       return if over == @last_over
       @last_over = over
@@ -267,17 +293,22 @@ module Tetris
     end
 
     def update(game)
-      if game.over?
+      if game.over? || game.paused?
         return unless @playing
         @playing = false
+        @board_version_at_stop = game.board_version
         A.stop(MELODY_VOICE)
         A.stop(BASS_VOICE)
         return
       end
       unless @playing
         @playing = true
-        @melody.reset
-        @bass.reset
+        # A new game (restart bumps board_version) starts the song over; a
+        # resumed one carries on where it stopped.
+        if game.board_version != @board_version_at_stop
+          @melody.reset
+          @bass.reset
+        end
       end
       @melody.update
       @bass.update
@@ -294,6 +325,8 @@ module Tetris
     def initialize(game)
       remember(game)
       @over = game.over?
+      @paused = game.paused?
+      @selection = game.pause_selection
     end
 
     def update(game)
@@ -302,6 +335,21 @@ module Tetris
         @over = over
         A.play(1, 500, 700, wave: :saw, slide_to: 60, volume: 150, decay: true) if over
         remember(game)
+        return
+      end
+      paused = game.paused?
+      if paused != @paused
+        @paused = paused
+        @selection = game.pause_selection
+        A.play(0, 660, 50, wave: :triangle, volume: 80)
+        remember(game)
+        return
+      end
+      if paused
+        if game.pause_selection != @selection
+          @selection = game.pause_selection
+          A.play(0, 990, 25, volume: 70)
+        end
         return
       end
       if game.board_version != @board_version
