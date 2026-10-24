@@ -22,11 +22,19 @@ void pocket_fb_fill_rect(uint16_t *fb, int x, int y, int w, int h, uint16_t colo
 /* bg < 0 leaves the glyph background untouched. */
 void pocket_fb_draw_text(uint16_t *fb, int x, int y, const char *s, size_t len, uint16_t fg, int bg);
 
+/* Rows touched since the last reset, so a port that copies the framebuffer
+ * out can copy only what changed. Returns false when nothing was drawn. */
+bool pocket_fb_dirty_rows(int *y0, int *y1);
+void pocket_fb_dirty_reset(void);
+
 /* Port contract. */
 uint16_t *pocket_port_framebuffer(void);
 void pocket_port_flush(void);
 /* True once per frame after vblank started; reading clears it. */
 bool pocket_port_vblank_triggered(void);
+/* Block until the next vblank and return true, or return false at once when
+ * the port cannot block (the browser), in which case the caller polls. */
+bool pocket_port_wait_vblank(void);
 uint32_t pocket_port_frame_count(void);
 /* Controller 1 bitmap: bit 0 up, 1 down, 2 left, 3 right, 4 A, 5 B, 6 X, 7 Y,
  * 8 L1, 9 R1, 10 L2, 11 R2, 12 L3, 13 R3, 14 select, 15 start. */

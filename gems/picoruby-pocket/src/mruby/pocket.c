@@ -63,6 +63,11 @@ static mrb_value pocket_vblank_p(mrb_state *mrb, mrb_value klass)
   return mrb_bool_value(pocket_port_vblank_triggered());
 }
 
+static mrb_value pocket_wait_vblank(mrb_state *mrb, mrb_value klass)
+{
+  return mrb_bool_value(pocket_port_wait_vblank());
+}
+
 static mrb_value pocket_frame_count(mrb_state *mrb, mrb_value klass)
 {
   return mrb_int_value(mrb, (mrb_int)(pocket_port_frame_count() & 0x3fffffff));
@@ -77,6 +82,7 @@ void mrb_picoruby_pocket_gem_init(mrb_state *mrb)
 {
   struct RClass *pocket = mrb_define_module_id(mrb, MRB_SYM(Pocket));
   mrb_define_class_method_id(mrb, pocket, MRB_SYM_Q(_vblank), pocket_vblank_p, MRB_ARGS_NONE());
+  mrb_define_class_method_id(mrb, pocket, MRB_SYM(_wait_vblank), pocket_wait_vblank, MRB_ARGS_NONE());
   mrb_define_class_method_id(mrb, pocket, MRB_SYM(frame_count), pocket_frame_count, MRB_ARGS_NONE());
 
   struct RClass *display = mrb_define_module_under_id(mrb, pocket, MRB_SYM(Display));

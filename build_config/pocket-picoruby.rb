@@ -51,4 +51,18 @@ MRuby::CrossBuild.new("pocket-picoruby#{ENV['PICORB_DEBUG'] ? '-debug' : ''}") d
   conf.picoruby
 
   pocket_common_gems(conf)
+
+  # picoruby-mruby puts every non-POSIX target on MRB_CONSTRAINED_BASELINE_PROFILE,
+  # which turns the method cache off (MRB_NO_METHOD_CACHE). That suits a
+  # 264 KB microcontroller; here a method call costs ~80 us without the cache on
+  # a 57 MHz core with 4 KB caches, and there is 40 MB of RAM. The gem adds the
+  # define from its mrbgem.rake, so it is removed at the one point that runs
+  # after every gem has contributed its defines. firmware/Makefile must not
+  # define it either (it changes sizeof(mrb_state)).
+  class << conf
+    def defines_final!
+      defines.delete("MRB_CONSTRAINED_BASELINE_PROFILE=1")
+      super
+    end
+  end
 end

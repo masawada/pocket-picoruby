@@ -33,6 +33,11 @@ bool pocket_port_vblank_triggered(void)
   return v;
 }
 
+bool pocket_port_wait_vblank(void)
+{
+  return false;
+}
+
 uint32_t pocket_port_frame_count(void)
 {
   return frame_count;

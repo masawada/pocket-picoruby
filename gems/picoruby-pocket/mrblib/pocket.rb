@@ -6,7 +6,10 @@ module Pocket
 
   # Returns once the next vertical blank has started. Draw, then call this,
   # then flush: the same loop runs on the Pocket and in the browser runner.
+  # The device blocks in C; the browser cannot, so there it yields to the
+  # scheduler a millisecond at a time until the host reports the frame.
   def self.wait_vsync
+    return if _wait_vblank
     sleep_ms 1 until _vblank?
   end
 

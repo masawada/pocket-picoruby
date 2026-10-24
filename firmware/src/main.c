@@ -84,6 +84,47 @@ static void print_diagnostics(mrc_ccontext *cc)
   console_set_colour(CONSOLE_WHITE, CONSOLE_BLACK);
 }
 
+/*
+ * Boot-time speed figures for the core and SDRAM, so Ruby-level slowness can
+ * be told apart from the machine itself. The loop body is kept in registers;
+ * the reads walk the script buffer sequentially and then one word per cache line.
+ */
+static uint32_t elapsed_ms(uint64_t t0)
+{
+  return (uint32_t)((clint_mtime() - t0) * 1000u / CONFIG_CLOCK_FREQUENCY);
+}
+
+static void print_cpu_bench(void)
+{
+  uint64_t t0 = clint_mtime();
+  uint32_t acc = 0;
+  for (uint32_t i = 0; i < 10000000u; i++) {
+    acc += i;
+    __asm__ volatile("" : "+r"(acc));
+  }
+  uint32_t loop_ms = elapsed_ms(t0);
+
+  volatile uint32_t *mem = (volatile uint32_t *)script_buf;
+  uint32_t words = SCRIPT_MAX_SIZE / sizeof(uint32_t);
+  t0 = clint_mtime();
+  for (uint32_t pass = 0; pass < 4; pass++) {
+    for (uint32_t i = 0; i < words; i++) acc += mem[i];
+  }
+  uint32_t seq_ms = elapsed_ms(t0);
+
+  t0 = clint_mtime();
+  for (uint32_t pass = 0; pass < 4; pass++) {
+    for (uint32_t i = 0; i < words; i += 16) acc += mem[i];
+  }
+  uint32_t stride_ms = elapsed_ms(t0);
+
+  console_set_colour(CONSOLE_GREY, CONSOLE_BLACK);
+  console_printf("cpu: 10M loop %lu ms, 1MB read %lu ms, 16K lines %lu ms\n",
+                 (unsigned long)loop_ms, (unsigned long)seq_ms, (unsigned long)stride_ms);
+  console_set_colour(CONSOLE_WHITE, CONSOLE_BLACK);
+  (void)acc;
+}
+
 /* Fetch the script from the data slot; halts with a message when there is none. */
 static size_t load_script(void)
 {
@@ -124,6 +165,7 @@ int main(void)
   console_set_colour(CONSOLE_GREY, CONSOLE_BLACK);
   console_printf("heap %u KB at %08lx\n", (unsigned)(RUBY_HEAP_SIZE / 1024), (unsigned long)RUBY_HEAP_BASE);
   console_set_colour(CONSOLE_WHITE, CONSOLE_BLACK);
+  print_cpu_bench();
 
   size_t script_len = load_script();
 
