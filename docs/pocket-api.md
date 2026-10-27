@@ -6,7 +6,9 @@ the browser build. Everything here behaves the same on both.
 ## Screen: `Pocket::Display`
 
 The screen is 266x240 pixels, RGB565. Drawing goes to a framebuffer that is
-shown after `flush`; nothing appears until then.
+shown after `flush`; nothing appears until then. On the device the leftmost
+column (x = 0) is never displayed, a quirk of the 0.1.0 bitstream explained in
+[architecture.md](architecture.md); keep anything that matters at x >= 1.
 
 | Method | Description |
 | --- | --- |

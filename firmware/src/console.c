@@ -6,8 +6,10 @@
 
 #include "font_8x16.h"
 
-/* The Pocket hides the leftmost pixel column of the 266 px picture, so the
- * text grid starts 2 px in; 33 columns of 8 px leave exactly that much. */
+/* The openfpga-litex 0.1.0 bitstream never shows framebuffer column 0: it
+ * outputs a 268 px line as 1 black px, columns 1..265, then 2 black px
+ * (target/pocket/core_top.sv, fixed upstream after the release). Starting the
+ * text grid 2 px in centres it: 33 columns of 8 px leave 2 px on each side. */
 #define LEFT_MARGIN 2
 #define COLS ((DISPLAY_WIDTH - LEFT_MARGIN) / FONT_WIDTH)
 #define ROWS (DISPLAY_HEIGHT / FONT_HEIGHT)

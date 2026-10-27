@@ -61,8 +61,14 @@ headers (`VIDEO_FRAMEBUFFER_BASE`, `MAIN_RAM_SIZE`), not hard-coded.
 | 1 | Script | `main.rb` (default) | `0x249`: the same plus "persist browsed filename" |
 
 Slot 1 is what *Core Settings → Load Script* edits. `core/video.json`
-declares 268x240 like the upstream core; declaring the real 266 garbles the
-picture, so the leftmost column stays hidden and the console starts 2 px in.
+declares 268x240 like the upstream core because the bitstream really sends
+268 pixels per line (declaring 266 garbles the picture). The 0.1.0 release
+bitstream fills them as 1 black pixel, framebuffer columns 1..265, then 2
+black pixels: column 0 is never shown (`target/pocket/core_top.sv` gates the
+colour with a one-cycle-late data enable; upstream fixed this after the
+release, in commit c21570d). So the visible area is x = 1..265, off-centre by
+one pixel, and the console starts 2 px in, which leaves 2 black pixels on each
+side of the text. The browser runner shows all 266 columns.
 
 ## Display path
 
