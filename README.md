@@ -40,7 +40,7 @@ the memory map, and what the 57 MHz core can and cannot do.
 
 - macOS on Apple silicon (the toolchain fetch script downloads the
   `darwin-arm64` build; other hosts need `scripts/fetch-toolchain.sh` adjusted)
-- CRuby 3.4 or newer (`.ruby-version` names 4.0.1) with `rake`
+- CRuby 3.4 or newer (`.ruby-version` names 4.0.9) with `rake`
 - Node.js 20+ for the browser runner and the tests
 - Emscripten (`brew install emscripten`) for the browser runner and the tests
 - An Analogue Pocket with openFPGA enabled and an SD card
