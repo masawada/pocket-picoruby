@@ -137,7 +137,9 @@ document.getElementById("file").addEventListener("change", async (e) => {
 const params = new URLSearchParams(window.location.search);
 const script = params.get("script");
 if (script) {
-  const res = await fetch(script);
+  // The script is what gets edited and re-run, and the dev server sends no
+  // Cache-Control, so skip the browser cache rather than serve a stale copy.
+  const res = await fetch(script, { cache: "no-store" });
   if (res.ok) run(await res.text(), script.split("/").pop());
   else status.textContent = `cannot fetch ${script}`;
 } else {
