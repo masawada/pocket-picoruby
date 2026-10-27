@@ -12,9 +12,7 @@
 
 #define CONSOLE_BLACK RGB565(0, 0, 0)
 #define CONSOLE_WHITE RGB565(31, 63, 31)
-#define CONSOLE_GREY RGB565(16, 32, 16)
 #define CONSOLE_RED RGB565(31, 16, 16)
-#define CONSOLE_GREEN RGB565(16, 63, 16)
 
 void console_init(void);
 void console_set_colour(uint16_t fg, uint16_t bg);

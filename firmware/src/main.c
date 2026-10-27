@@ -1,8 +1,9 @@
 /*
  * Boot PicoRuby, read the Ruby script from the "Script" data slot, compile it
- * on the device and run it. Output and exceptions appear on the on-screen
- * console. Picking another .rb from the Pocket menu resets the core, so this
- * runs again from the top.
+ * on the device and run it. The firmware prints nothing on its own: the screen
+ * stays black until the script draws or writes to the on-screen console, where
+ * exceptions and load errors also appear. Picking another .rb from the Pocket
+ * menu resets the core, so this runs again from the top.
  */
 #include <stdint.h>
 #include <string.h>
@@ -84,47 +85,6 @@ static void print_diagnostics(mrc_ccontext *cc)
   console_set_colour(CONSOLE_WHITE, CONSOLE_BLACK);
 }
 
-/*
- * Boot-time speed figures for the core and SDRAM, so Ruby-level slowness can
- * be told apart from the machine itself. The loop body is kept in registers;
- * the reads walk the script buffer sequentially and then one word per cache line.
- */
-static uint32_t elapsed_ms(uint64_t t0)
-{
-  return (uint32_t)((clint_mtime() - t0) * 1000u / CONFIG_CLOCK_FREQUENCY);
-}
-
-static void print_cpu_bench(void)
-{
-  uint64_t t0 = clint_mtime();
-  uint32_t acc = 0;
-  for (uint32_t i = 0; i < 10000000u; i++) {
-    acc += i;
-    __asm__ volatile("" : "+r"(acc));
-  }
-  uint32_t loop_ms = elapsed_ms(t0);
-
-  volatile uint32_t *mem = (volatile uint32_t *)script_buf;
-  uint32_t words = SCRIPT_MAX_SIZE / sizeof(uint32_t);
-  t0 = clint_mtime();
-  for (uint32_t pass = 0; pass < 4; pass++) {
-    for (uint32_t i = 0; i < words; i++) acc += mem[i];
-  }
-  uint32_t seq_ms = elapsed_ms(t0);
-
-  t0 = clint_mtime();
-  for (uint32_t pass = 0; pass < 4; pass++) {
-    for (uint32_t i = 0; i < words; i += 16) acc += mem[i];
-  }
-  uint32_t stride_ms = elapsed_ms(t0);
-
-  console_set_colour(CONSOLE_GREY, CONSOLE_BLACK);
-  console_printf("cpu: 10M loop %lu ms, 1MB read %lu ms, 16K lines %lu ms\n",
-                 (unsigned long)loop_ms, (unsigned long)seq_ms, (unsigned long)stride_ms);
-  console_set_colour(CONSOLE_WHITE, CONSOLE_BLACK);
-  (void)acc;
-}
-
 /* Fetch the script from the data slot; halts with a message when there is none. */
 static size_t load_script(void)
 {
@@ -133,9 +93,6 @@ static size_t load_script(void)
   bridge_result_t r = bridge_read_file(SCRIPT_SLOT, script_buf, SCRIPT_MAX_SIZE, &len, &code);
   switch (r) {
   case BRIDGE_OK:
-    console_set_colour(CONSOLE_GREY, CONSOLE_BLACK);
-    console_printf("script: %u bytes\n", (unsigned)len);
-    console_set_colour(CONSOLE_WHITE, CONSOLE_BLACK);
     return len;
   case BRIDGE_NO_FILE:
     console_puts("No script loaded.\nPick a .rb file in the Script slot\nfrom the Pocket menu.\n");
@@ -159,13 +116,6 @@ int main(void)
   display_init();
   console_init();
   timer_init();
-
-  console_set_colour(CONSOLE_GREEN, CONSOLE_BLACK);
-  console_puts("PicoRuby on Analogue Pocket\n");
-  console_set_colour(CONSOLE_GREY, CONSOLE_BLACK);
-  console_printf("heap %u KB at %08lx\n", (unsigned)(RUBY_HEAP_SIZE / 1024), (unsigned long)RUBY_HEAP_BASE);
-  console_set_colour(CONSOLE_WHITE, CONSOLE_BLACK);
-  print_cpu_bench();
 
   size_t script_len = load_script();
 
