@@ -253,11 +253,11 @@ end
 module Tetris
   # Background music: Korobeiniki (traditional) on two voices through
   # Sequencer, clocked by Pocket.frame_count so a frame the game loop misses
-  # does not slow the song down. Units are sixteenth notes; 4 frames each is
-  # 225 bpm. Stops on game over, restarts with the game.
+  # does not slow the song down. Units are sixteenth notes; 6 frames each at
+  # 60 Hz is 150 bpm. Stops on game over, restarts with the game.
   class Music
     A = Pocket::Audio
-    UNIT_FRAMES = 4
+    UNIT_FRAMES = 6
     MELODY_VOICE = 2
     BASS_VOICE = 3
 
