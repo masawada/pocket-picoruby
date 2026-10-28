@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Run a Ruby script headlessly on the wasm build (web/dist/pocket-node.js).
+// Plain TypeScript that Node runs as is (type stripping), so no build step.
 //
-//   node scripts/run-rb.mjs path/to/script.rb [--frames N] [--timeout MS] [--screenshot out.png] [--press A@30 ...]
+//   node scripts/run-rb.ts path/to/script.rb [--frames N] [--timeout MS] [--screenshot out.png] [--press A@30 ...]
 //
 // The screen is not shown; vblank is raised every 16 ms of wall time so
 // Pocket.wait_vsync paces the script like the device. Exit status is 1 when a
@@ -11,17 +12,17 @@
 // frame (names as in Pocket::Input), so a scripted run can navigate.
 
 import { readFileSync, writeFileSync } from "node:fs";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
+import createModule from "../web/dist/pocket-node.js";
+import { BUTTONS, HEIGHT, WIDTH, type Button } from "../web/pocket.ts";
 
 const args = process.argv.slice(2);
 const scriptPath = args.find((a) => !a.startsWith("--"));
 if (!scriptPath) {
-  console.error("usage: node scripts/run-rb.mjs script.rb [--frames N] [--timeout MS]");
+  console.error("usage: node scripts/run-rb.ts script.rb [--frames N] [--timeout MS]");
   process.exit(64);
 }
-const opt = (name, dflt) => {
+const opt = (name: string, dflt: number): number => {
   const i = args.indexOf(name);
   return i >= 0 ? Number(args[i + 1]) : dflt;
 };
@@ -31,27 +32,20 @@ const shotIndex = args.indexOf("--screenshot");
 const screenshot = shotIndex >= 0 ? args[shotIndex + 1] : null;
 
 // --press A@30 --press RIGHT@60: hold a button for two frames from that frame.
-const BUTTONS = {
-  UP: 1 << 0, DOWN: 1 << 1, LEFT: 1 << 2, RIGHT: 1 << 3, A: 1 << 4, B: 1 << 5, X: 1 << 6, Y: 1 << 7,
-  L1: 1 << 8, R1: 1 << 9, L2: 1 << 10, R2: 1 << 11, L3: 1 << 12, R3: 1 << 13, SELECT: 1 << 14, START: 1 << 15,
-};
-const presses = [];
+const presses: { bit: number; at: number }[] = [];
 args.forEach((a, i) => {
   if (a !== "--press") return;
   const [name, at] = args[i + 1].split("@");
   if (!(name in BUTTONS)) { console.error(`unknown button ${name}`); process.exit(64); }
-  presses.push({ bit: BUTTONS[name], at: Number(at) });
+  presses.push({ bit: BUTTONS[name as Button], at: Number(at) });
 });
-function keysAtFrame(frame) {
+function keysAtFrame(frame: number): number {
   let bits = 0;
   for (const p of presses) if (frame >= p.at && frame < p.at + 2) bits |= p.bit;
   return bits;
 }
 
-const WIDTH = 266;
-const HEIGHT = 240;
-
-function crc32(buf) {
+function crc32(buf: Uint8Array): number {
   let c = ~0;
   for (const b of buf) {
     c ^= b;
@@ -60,7 +54,7 @@ function crc32(buf) {
   return ~c >>> 0;
 }
 
-function pngChunk(type, data) {
+function pngChunk(type: string, data: Buffer): Buffer {
   const len = Buffer.alloc(4);
   len.writeUInt32BE(data.length);
   const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
@@ -70,7 +64,7 @@ function pngChunk(type, data) {
 }
 
 // RGB565 framebuffer -> 8-bit RGB PNG.
-function writePng(path, fb) {
+function writePng(path: string, fb: Uint16Array) {
   const raw = Buffer.alloc((WIDTH * 3 + 1) * HEIGHT);
   for (let y = 0; y < HEIGHT; y++) {
     raw[y * (WIDTH * 3 + 1)] = 0; // filter: none
@@ -94,8 +88,6 @@ function writePng(path, fb) {
   ]));
 }
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const createModule = (await import(resolve(root, "web/dist/pocket-node.js"))).default;
 const Module = await createModule({
   print: (t) => process.stdout.write(t + "\n"),
   printErr: (t) => process.stderr.write(t + "\n"),

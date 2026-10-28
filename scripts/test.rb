@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 # Run test/*_test.rb on the wasm build. Picotest orchestrates from CRuby and
-# executes each test class on PicoRuby through scripts/run-rb.mjs (node).
+# executes each test class on PicoRuby through scripts/run-rb.ts (node).
 #
 #   ruby scripts/test.rb            # everything under test/
 #   ruby scripts/test.rb board      # only files whose name includes "board"
@@ -12,7 +12,7 @@ ROOT = File.expand_path("..", __dir__)
 $LOAD_PATH.unshift File.join(ROOT, "vendor/picoruby/mrbgems/picoruby-picotest/mrblib")
 require "picotest"
 
-ENV["RUBY"] = "node #{File.join(ROOT, 'scripts/run-rb.mjs')}"
+ENV["RUBY"] = "node #{File.join(ROOT, 'scripts/run-rb.ts')}"
 
 runner = Picotest::Runner.new(
   File.join(ROOT, "test"),

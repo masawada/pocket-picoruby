@@ -34,7 +34,7 @@ INCLUDES="-I${PICORUBY}/include \
 
 mkdir -p "${OUT}"
 # Two links of the same objects: pocket.js for the browser, pocket-node.js for
-# scripts/run-rb.mjs (headless runs and tests).
+# scripts/run-rb.ts (headless runs and tests).
 link() {
   emcc -O2 ${DEFINES} ${INCLUDES} \
     -s WASM=1 -s EXPORT_ES6=1 -s MODULARIZE=1 -s ENVIRONMENT="$1" \
