@@ -79,7 +79,8 @@ directly into the DMA window tears, because a few Ruby calls take
 milliseconds while the beam is scanning. `Pocket.wait_vsync` blocks in C on
 the device (polls the vblank CSR); in the browser it yields to the scheduler
 1 ms at a time until the host reports a frame, which the runner does at 60 Hz
-from `requestAnimationFrame` timestamps, whatever the display's refresh rate.
+from `requestAnimationFrame` timestamps on displays that refresh at 60 Hz or
+faster (120 Hz laptops included).
 
 ## Build system
 

@@ -101,7 +101,8 @@ function blit() {
 // refresh rate (120 Hz on recent laptops), so it only drives a 60 Hz clock
 // here; at 120 Hz every other animation frame raises vblank. The quarter-frame
 // slack absorbs the timestamp jitter at 60 Hz, which would otherwise skip a
-// vblank now and then.
+// vblank now and then. A display slower than 60 Hz still gets one vblank per
+// animation frame, so the game runs slow there, as it did before.
 const FRAME_MS = 1000 / 60;
 const SLACK_MS = FRAME_MS / 4;
 let nextVblank = -Infinity;
