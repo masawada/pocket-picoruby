@@ -1,6 +1,6 @@
 /*
  * Host port (wasm and plain POSIX builds): a framebuffer in memory. The
- * browser runner blits it to a canvas every animation frame, reports vblank
+ * browser runner reports vblank at 60 Hz, blits the framebuffer to a canvas
  * and feeds the button bitmap through the pocket_host_* entry points.
  */
 #include "../../include/pocket.h"

@@ -78,7 +78,8 @@ the data cache (`flush_cpu_dcache`, the VexRiscv `.word 0x500F`). Drawing
 directly into the DMA window tears, because a few Ruby calls take
 milliseconds while the beam is scanning. `Pocket.wait_vsync` blocks in C on
 the device (polls the vblank CSR); in the browser it yields to the scheduler
-1 ms at a time until the host reports a frame.
+1 ms at a time until the host reports a frame, which the runner does at 60 Hz
+from `requestAnimationFrame` timestamps, whatever the display's refresh rate.
 
 ## Build system
 

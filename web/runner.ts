@@ -97,9 +97,23 @@ function blit() {
   ctx.putImageData(image, 0, 0);
 }
 
-function frame() {
-  Module._pocket_host_vblank();
-  blit();
+// The Pocket's vblank is 60 Hz. requestAnimationFrame runs at the display's
+// refresh rate (120 Hz on recent laptops), so it only drives a 60 Hz clock
+// here; at 120 Hz every other animation frame raises vblank. The quarter-frame
+// slack absorbs the timestamp jitter at 60 Hz, which would otherwise skip a
+// vblank now and then.
+const FRAME_MS = 1000 / 60;
+const SLACK_MS = FRAME_MS / 4;
+let nextVblank = -Infinity;
+function frame(now: number) {
+  if (now >= nextVblank - SLACK_MS) {
+    Module._pocket_host_vblank();
+    blit();
+    // Keep the clock steady unless it fell more than a frame behind (the tab
+    // was hidden and got no animation frames); then restart it from now
+    // rather than replaying the missed frames.
+    nextVblank = nextVblank > now - FRAME_MS ? nextVblank + FRAME_MS : now + FRAME_MS;
+  }
   requestAnimationFrame(frame);
 }
 
