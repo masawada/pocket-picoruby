@@ -251,9 +251,10 @@ module Tetris
 end
 
 module Tetris
-  # Background music: Korobeiniki (traditional) on two voices, one frame at a
-  # time through Sequencer. Units are sixteenth notes; 4 frames each is about
-  # 112 bpm. Stops on game over, restarts with the game.
+  # Background music: Korobeiniki (traditional) on two voices through
+  # Sequencer, clocked by Pocket.frame_count so a frame the game loop misses
+  # does not slow the song down. Units are sixteenth notes; 4 frames each is
+  # 225 bpm. Stops on game over, restarts with the game.
   class Music
     A = Pocket::Audio
     UNIT_FRAMES = 4
@@ -290,12 +291,15 @@ module Tetris
         A.play(BASS_VOICE, hz, frames * 1000 / 60 - 15, wave: :triangle, volume: 90)
       end
       @playing = true
+      @start = Pocket.frame_count  # the frame the song is at position 0
     end
 
     def update(game)
+      now = Pocket.frame_count
       if game.over? || game.paused?
         return unless @playing
         @playing = false
+        @stopped_at = now
         @board_version_at_stop = game.board_version
         A.stop(MELODY_VOICE)
         A.stop(BASS_VOICE)
@@ -303,15 +307,19 @@ module Tetris
       end
       unless @playing
         @playing = true
-        # A new game (restart bumps board_version) starts the song over; a
-        # resumed one carries on where it stopped.
         if game.board_version != @board_version_at_stop
+          # A new game (restart bumps board_version) starts the song over.
+          @start = now
           @melody.reset
           @bass.reset
+        else
+          # A resumed one carries on where it stopped: the frames spent
+          # paused do not count.
+          @start += now - @stopped_at
         end
       end
-      @melody.update
-      @bass.update
+      @melody.update(now - @start)
+      @bass.update(now - @start)
     end
   end
 

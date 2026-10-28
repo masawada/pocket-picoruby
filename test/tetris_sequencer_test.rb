@@ -4,29 +4,44 @@ class TetrisSequencerTest < Picotest::Test
     @seq = Tetris::Sequencer.new([[440, 2], [0, 1], [660, 1]], 3) { |hz, frames| @played << [hz, frames] }
   end
 
-  def test_first_note_fires_on_the_first_frame
-    @seq.update
+  def test_first_note_fires_on_frame_zero
+    @seq.update(0)
     assert_equal([[440, 6]], @played)
   end
 
   def test_notes_fire_when_their_time_comes_and_rests_are_silent
-    8.times { @seq.update }
     # 440 at frame 0 for 6 frames, rest at frame 6 for 3, 660 at frame 9
+    (0..8).each { |f| @seq.update(f) }
     assert_equal([[440, 6]], @played)
-    2.times { @seq.update }
+    @seq.update(9)
     assert_equal([[440, 6], [660, 3]], @played)
   end
 
   def test_loops_back_to_the_start
-    13.times { @seq.update }
+    (0..12).each { |f| @seq.update(f) }
     assert_equal([[440, 6], [660, 3], [440, 6]], @played)
     assert_equal(1, @seq.index)
   end
 
+  def test_dropped_frames_do_not_stretch_the_track
+    @seq.update(0)
+    # Frames 1..10 were never seen: the 660 due at frame 9 fires now, and
+    # the 440 due at frame 12 still comes at 12.
+    @seq.update(11)
+    assert_equal([[440, 6], [660, 3]], @played)
+    @seq.update(12)
+    assert_equal([[440, 6], [660, 3], [440, 6]], @played)
+  end
+
+  def test_every_note_that_came_due_fires
+    @seq.update(13)
+    assert_equal([[440, 6], [660, 3], [440, 6]], @played)
+  end
+
   def test_reset_starts_over
-    5.times { @seq.update }
+    (0..4).each { |f| @seq.update(f) }
     @seq.reset
-    @seq.update
+    @seq.update(0)
     assert_equal([[440, 6], [440, 6]], @played)
   end
 

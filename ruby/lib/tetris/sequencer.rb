@@ -1,5 +1,5 @@
 module Tetris
-  # Steps through a track one frame at a time and fires notes on schedule.
+  # Steps through a track on a frame clock and fires notes on schedule.
   # A track is an array of [hz, units]; hz 0 is a rest; a unit lasts
   # unit_frames frames. The block receives (hz, frames) for every note and
   # is what actually makes sound, so the timing can be tested without audio.
@@ -15,13 +15,14 @@ module Tetris
 
     def reset
       @index = 0
-      @frame = 0
       @next_at = 0
     end
 
-    # Call once per frame. Cheap when no note is due (two comparisons).
-    def update
-      if @frame >= @next_at
+    # Call every frame with the frames elapsed since reset. Fires every note
+    # due by then, so a frame the caller missed delays a note instead of the
+    # rest of the track. Cheap when nothing is due (one comparison).
+    def update(frame)
+      while frame >= @next_at
         note = @track[@index]
         frames = note[1] * @unit_frames
         @player.call(note[0], frames) if note[0] > 0
@@ -29,7 +30,6 @@ module Tetris
         @index += 1
         @index = 0 if @index >= @track.size
       end
-      @frame += 1
     end
 
     # Hz of a note name such as "E5" or "Bb3", equal temperament, A4 = 440.
