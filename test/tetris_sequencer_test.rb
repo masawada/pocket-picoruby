@@ -25,17 +25,20 @@ class TetrisSequencerTest < Picotest::Test
 
   def test_dropped_frames_do_not_stretch_the_track
     @seq.update(0)
-    # Frames 1..10 were never seen: the 660 due at frame 9 fires now, and
-    # the 440 due at frame 12 still comes at 12.
+    # Frames 1..10 were never seen: the 660 due at frame 9 fires now for the
+    # one frame it has left, and the 440 due at frame 12 still comes at 12.
     @seq.update(11)
-    assert_equal([[440, 6], [660, 3]], @played)
+    assert_equal([[440, 6], [660, 1]], @played)
     @seq.update(12)
-    assert_equal([[440, 6], [660, 3], [440, 6]], @played)
+    assert_equal([[440, 6], [660, 1], [440, 6]], @played)
   end
 
-  def test_every_note_that_came_due_fires
+  def test_catching_up_plays_only_what_still_sounds
+    # Nothing was seen until frame 13: the 440 of frames 0..5 and the 660 of
+    # frames 9..11 are over, the 440 that began at 12 has 5 frames left.
     @seq.update(13)
-    assert_equal([[440, 6], [660, 3], [440, 6]], @played)
+    assert_equal([[440, 5]], @played)
+    assert_equal(1, @seq.index)
   end
 
   def test_reset_starts_over

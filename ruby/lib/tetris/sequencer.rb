@@ -18,14 +18,17 @@ module Tetris
       @next_at = 0
     end
 
-    # Call every frame with the frames elapsed since reset. Fires every note
+    # Call every frame with the frames elapsed since reset. Fires the notes
     # due by then, so a frame the caller missed delays a note instead of the
-    # rest of the track. Cheap when nothing is due (one comparison).
+    # rest of the track: a note that should already be sounding plays for
+    # what is left of it, one that already ended is skipped. Cheap when
+    # nothing is due (one comparison).
     def update(frame)
       while frame >= @next_at
         note = @track[@index]
         frames = note[1] * @unit_frames
-        @player.call(note[0], frames) if note[0] > 0
+        remaining = @next_at + frames - frame
+        @player.call(note[0], remaining) if note[0] > 0 && remaining > 0
         @next_at += frames
         @index += 1
         @index = 0 if @index >= @track.size
