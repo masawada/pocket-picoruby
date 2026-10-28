@@ -1,7 +1,7 @@
 /*
  * Browser host for PicoRuby: the counterpart of firmware/src/main.c.
  *
- * JavaScript (web/runner.js) calls, in order: pocket_wasm_init(), then
+ * The host (web/runner.ts) calls, in order: pocket_wasm_init(), then
  * pocket_wasm_load(code, filename) for the script, then on a timer
  * pocket_wasm_tick() every MRB_TICK_UNIT ms and pocket_wasm_step() until it
  * reports idle. Output goes to stdout/stderr (Module.print / printErr).

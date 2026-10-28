@@ -1,6 +1,7 @@
 # Local toolchain and downloaded artifacts (see scripts/)
 /.toolchain/
 /.cache/
+/node_modules/
 
 # Build outputs
 /dist/

@@ -2,32 +2,43 @@
 // Loads dist/pocket.js (built by scripts/build-wasm.sh).
 
 import createModule from "./dist/pocket.js";
+import { BUTTONS, HEIGHT, WIDTH, type PocketModule } from "./pocket.ts";
 
-const WIDTH = 266;
-const HEIGHT = 240;
 const MRB_TICK_UNIT = 1;      // must match build_config/pocket-wasm.rb
 const BATCH_DURATION = 12;    // ms of VM time per host-loop pass
 const MAX_CATCHUP_TICKS = 20;
 
-const KEYMAP = {
-  ArrowUp: 1 << 0, ArrowDown: 1 << 1, ArrowLeft: 1 << 2, ArrowRight: 1 << 3,
-  KeyZ: 1 << 4,  // A
-  KeyX: 1 << 5,  // B
-  KeyA: 1 << 6,  // X
-  KeyS: 1 << 7,  // Y
-  KeyQ: 1 << 8,  // L1
-  KeyW: 1 << 9,  // R1
-  ShiftLeft: 1 << 14, ShiftRight: 1 << 14, // select
-  Enter: 1 << 15, // start
+const KEYMAP: Record<string, number> = {
+  ArrowUp: BUTTONS.UP, ArrowDown: BUTTONS.DOWN, ArrowLeft: BUTTONS.LEFT, ArrowRight: BUTTONS.RIGHT,
+  KeyZ: BUTTONS.A,
+  KeyX: BUTTONS.B,
+  KeyA: BUTTONS.X,
+  KeyS: BUTTONS.Y,
+  KeyQ: BUTTONS.L1,
+  KeyW: BUTTONS.R1,
+  ShiftLeft: BUTTONS.SELECT, ShiftRight: BUTTONS.SELECT,
+  Enter: BUTTONS.START,
 };
 
-const canvas = document.getElementById("screen");
-const ctx = canvas.getContext("2d");
-const image = ctx.createImageData(WIDTH, HEIGHT);
-const log = document.getElementById("log");
-const status = document.getElementById("status");
+function element<T extends HTMLElement>(id: string): T {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`#${id} not found`);
+  return el as T;
+}
 
-function appendLog(text, cls) {
+function context2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2d canvas is not available");
+  return ctx;
+}
+
+const ctx = context2d(element<HTMLCanvasElement>("screen"));
+const image = ctx.createImageData(WIDTH, HEIGHT);
+const log = element<HTMLDivElement>("log");
+const status = element<HTMLDivElement>("status");
+const fileInput = element<HTMLInputElement>("file");
+
+function appendLog(text: string, cls?: string) {
   const line = document.createElement("div");
   line.textContent = text;
   if (cls) line.className = cls;
@@ -35,7 +46,7 @@ function appendLog(text, cls) {
   log.scrollTop = log.scrollHeight;
 }
 
-const Module = await createModule({
+const Module: PocketModule = await createModule({
   print: (t) => appendLog(t),
   printErr: (t) => appendLog(t, "err"),
 });
@@ -46,18 +57,18 @@ let audioStarted = false;
 function startAudio() {
   if (audioStarted) return;
   audioStarted = true;
-  const ctx = new AudioContext({ sampleRate: 48000 });
+  const audio = new AudioContext({ sampleRate: 48000 });
   const FRAMES = 1024;
   const ptr = Module._malloc(FRAMES * 2);
-  const node = ctx.createScriptProcessor(FRAMES, 0, 1);
+  const node = audio.createScriptProcessor(FRAMES, 0, 1);
   node.onaudioprocess = (e) => {
     Module._pocket_host_render_audio(ptr, FRAMES);
     const pcm = new Int16Array(Module.HEAPU8.buffer, ptr, FRAMES);
     const out = e.outputBuffer.getChannelData(0);
     for (let i = 0; i < FRAMES; i++) out[i] = pcm[i] / 32768;
   };
-  node.connect(ctx.destination);
-  ctx.resume();
+  node.connect(audio.destination);
+  audio.resume();
 }
 window.addEventListener("keydown", startAudio, { once: true });
 window.addEventListener("pointerdown", startAudio, { once: true });
@@ -113,15 +124,16 @@ function hostLoop() {
   setTimeout(hostLoop, progressed ? 0 : 1);
 }
 
-async function run(code, filename) {
+let started = false;
+function run(code: string, filename: string) {
   log.textContent = "";
   status.textContent = `running ${filename}`;
   // A fresh VM per script: the simplest way to match "reset core" on the device.
-  if (Module.started) {
+  if (started) {
     window.location.reload();
     return;
   }
-  Module.started = true;
+  started = true;
   if (Module.ccall("pocket_wasm_init", "number", [], []) !== 0) return;
   const ok = Module.ccall("pocket_wasm_load", "number", ["string", "string"], [code, filename]);
   if (ok !== 0) { status.textContent = `failed to load ${filename}`; return; }
@@ -129,19 +141,19 @@ async function run(code, filename) {
   hostLoop();
 }
 
-document.getElementById("file").addEventListener("change", async (e) => {
-  const f = e.target.files[0];
+fileInput.addEventListener("change", async () => {
+  const f = fileInput.files?.[0];
   if (f) run(await f.text(), f.name);
 });
 
 const params = new URLSearchParams(window.location.search);
 const script = params.get("script");
 if (script) {
-  // The script is what gets edited and re-run, and the dev server sends no
-  // Cache-Control, so skip the browser cache rather than serve a stale copy.
+  // The script is what gets edited and re-run, so skip the browser cache
+  // rather than serve a stale copy.
   const res = await fetch(script, { cache: "no-store" });
-  if (res.ok) run(await res.text(), script.split("/").pop());
+  if (res.ok) run(await res.text(), script.split("/").pop() ?? script);
   else status.textContent = `cannot fetch ${script}`;
 } else {
-  status.textContent = "pick a .rb file, or open ?script=../ruby/examples/draw.rb";
+  status.textContent = "pick a .rb file, or open ?script=ruby/examples/draw.rb";
 }
