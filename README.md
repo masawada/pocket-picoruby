@@ -29,7 +29,7 @@ tests run on that build under Node.
 | `core/` | Analogue core JSON (`core.json`, `data.json`, ...) for the `masawada.PicoRuby` core on platform `picoruby` |
 | `ruby/` | Ruby scripts: `main.rb`, `examples/`, Tetris in `lib/tetris/` + `tetris_main.rb` |
 | `test/` | picotest suites, run on the wasm build |
-| `web/` | Browser runner (`runner.c` host, `runner.js`, `index.html`) |
+| `web/` | Browser runner (`runner.c` host, `runner.ts`, `index.html`), served by Vite |
 | `scripts/` | Fetch, build, package, test helpers |
 | `vendor/` | Submodules: `picoruby`, `openfpga-litex` (both unmodified) |
 
@@ -41,7 +41,8 @@ the memory map, and what the 57 MHz core can and cannot do.
 - macOS on Apple silicon (the toolchain fetch script downloads the
   `darwin-arm64` build; other hosts need `scripts/fetch-toolchain.sh` adjusted)
 - CRuby 3.4 or newer (`.ruby-version` names 4.0.9) with `rake`
-- Node.js 20+ for the browser runner and the tests
+- Node.js 22.18+ (runs the TypeScript scripts directly) and npm for the
+  browser runner and the tests
 - Emscripten (`brew install emscripten`) for the browser runner and the tests
 - An Analogue Pocket with openFPGA enabled and an SD card
 
@@ -68,12 +69,18 @@ scripts/package.sh              # dist/pocket/ and dist/masawada.PicoRuby.zip
 
 ```sh
 scripts/build-wasm.sh           # web/dist/pocket.js (browser) and pocket-node.js (Node)
-scripts/serve-web.sh            # then open http://localhost:8000/web/?script=../build/tetris.rb
-node scripts/run-rb.mjs ruby/examples/hello.rb   # run a script headlessly
-node scripts/run-rb.mjs ruby/examples/nihongo.rb --frames 5 --screenshot shot.png  # and grab the screen
-node scripts/run-rb.mjs ruby/examples/draw.rb --frames 60 --press RIGHT@10 --press A@30 --screenshot shot.png  # scripted input
+npm install
+npm run dev                     # then open http://localhost:5173/?script=build/tetris.rb
+node scripts/run-rb.ts ruby/examples/hello.rb   # run a script headlessly
+node scripts/run-rb.ts ruby/examples/nihongo.rb --frames 5 --screenshot shot.png  # and grab the screen
+node scripts/run-rb.ts ruby/examples/draw.rb --frames 60 --press RIGHT@10 --press A@30 --screenshot shot.png  # scripted input
 ruby scripts/test.rb            # picotest suites in test/
+npm run typecheck               # tsc over web/ and scripts/
 ```
+
+The Vite dev server also serves `ruby/` and `build/` from the repository, so
+`?script=ruby/examples/draw.rb` picks up edits on reload. `npm run build`
+writes a static bundle to `build/web/`.
 
 In the browser, arrows are the d-pad, `Z`/`X` are A/B, `A`/`S` are X/Y,
 `Q`/`W` are L/R, Shift is Select and Enter is Start.

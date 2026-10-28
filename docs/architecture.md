@@ -16,7 +16,7 @@ Analogue Pocket (openFPGA)
 
 The browser build swaps the bottom layer: `web/runner.c` plays the role of
 `firmware/src/main.c`, `gems/picoruby-pocket/ports/posix` draws into memory,
-and `web/runner.js` blits it to a canvas and feeds the keyboard.
+and `web/runner.ts` blits it to a canvas and feeds the keyboard.
 
 ## Boot sequence (device)
 
@@ -124,6 +124,6 @@ the piece and its ghost occupied, and only a line clear repaints the well.
 
 `scripts/test.rb` drives picotest from CRuby: each test class in `test/` is
 embedded into a generated script together with `ruby/lib/**/*.rb` and
-executed on the wasm build through `scripts/run-rb.mjs` (Node). Game rules
+executed on the wasm build through `scripts/run-rb.ts` (Node). Game rules
 are tested frame by frame with a scripted input; nothing in the tests touches
 a screen.
